@@ -22,6 +22,7 @@ OMICRON_START_COLS = 672 - MOV_AVG_WIN
 def load_datasets(region, use_all=False):
     # Load data from Excel
     data_df = pd.read_excel('data/input/c19_data_for_FL.xlsx', sheet_name=region, index_col='Date')
+
     if use_all:
         # Use data from all regions as input
         dfs = []
@@ -57,6 +58,8 @@ def load_datasets(region, use_all=False):
     target = data_df[output_col].values
 
     # Align the data
+    # TODO Use the previous few days sliding window, e.g. 7 days, to predict the next day
+    # TODO Use figure to show the performance difference
     data = data[0:-time_lag]
     target = target[time_lag:]
     data_df = data_df[time_lag:]
@@ -65,6 +68,7 @@ def load_datasets(region, use_all=False):
     print(f'load_datasets: target.shape={target.shape}')
 
     # Normalize data
+    # TODO check the min-max scaler, e.g. consider [0, 1000]
     scaler = MinMaxScaler()
     X = scaler.fit_transform(data)
     y = scaler.fit_transform(target.reshape(-1, 1)).flatten()

@@ -1,6 +1,7 @@
 import argparse
 from datetime import datetime
 from math import sqrt
+import time
 import os
 
 from collections import OrderedDict
@@ -73,6 +74,8 @@ class FlowerClient(fl.client.NumPyClient):
 
     def fit(self, parameters, config):
         print(f'FlowerClient: fit')
+        start_time = time.time()
+
         set_parameters(self.model, parameters)
 
         # Set the model to training mode
@@ -91,6 +94,10 @@ class FlowerClient(fl.client.NumPyClient):
             # print(f'FL-LSTM after append: len(self.train_losses)={len(self.train_losses)}')
             if (epoch + 1) % 100 == 0:
                 print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}')
+
+        end_time = time.time()
+        total_time = round(end_time - start_time, 1)
+        print(f'Client fitting time is {total_time} seconds.')
 
         # Plot results
         plt.figure(figsize=(8, 8), dpi=150)
@@ -127,7 +134,7 @@ class FlowerClient(fl.client.NumPyClient):
             y_pred_train = self.model(self.x_train)
             y_pred_test = self.model(self.x_test)
 
-        # Denormalize predictions
+        # De-normalize predictions
         y_train = self.scaler.inverse_transform(self.y_train.detach().numpy().reshape(-1, 1)).flatten()
         y_test = self.scaler.inverse_transform(self.y_test.unsqueeze(1).numpy().reshape(-1, 1)).flatten()
         y_pred_train = self.scaler.inverse_transform(y_pred_train.detach().numpy().reshape(-1, 1)).flatten()
