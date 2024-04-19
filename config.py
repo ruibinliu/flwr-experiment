@@ -4,7 +4,7 @@ CONFIG = {
     'input_cols': ['NewCases'],
     'output_col': ['NewCases'],
 
-    # LSTM
+    # LSTM Hyper Parameters
     'num_epochs': 1000,
     'hidden_size': 64,
     'num_layers': 2,

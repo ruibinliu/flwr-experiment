@@ -30,7 +30,6 @@ def load_datasets(region, use_all=False):
         # new_input_cols = []
         for r in CONFIG['regions']:
             df = pd.read_excel('data/input/c19_data_for_FL.xlsx', sheet_name=r, index_col='Date')
-            # new_input_cols.extend([col + '_' + r for col in input_cols])
 
             rename_columns = {old: new for old, new in [(col, col + '_' + r) for col in input_cols]}
             if r == region:
@@ -76,10 +75,6 @@ def load_datasets(region, use_all=False):
     X = np.array(features)
     y = target[window_size:]
     data_df = data_df[window_size:]
-
-    # data = data[0:-time_lag]
-    # target = target[time_lag:]
-    # data_df = data_df[time_lag:]
 
     print(f'load_datasets: data.shape={X.shape}')
     print(f'load_datasets: target.shape={y.shape}')

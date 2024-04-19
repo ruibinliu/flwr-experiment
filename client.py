@@ -29,21 +29,10 @@ time_str = datetime.now().strftime('%m/%d_%H%M%S')
 output_dir = f'data/output/{time_str}'
 os.makedirs(output_dir)
 
-# input_cols_all = [c + '_' + r for c in input_cols for r in REGIONS]
 
 MODEL_LSTM = 'LSTM'
 MODEL_A_LSTM = 'A_LSTM'
 MODEL_FL_LSTM = 'FL_LSTM'
-
-# Define the Hyper Parameters
-# input_size = CONFIG['window_size']
-# input_size_all = len(input_cols_all)
-# hidden_size = 64
-# num_layers = 2
-# output_size = 1
-# num_epochs = 200
-# learning_rate = 0.01
-# dropout = 0.0  # Dropout probability
 
 
 def set_parameters(model, parameters: List[np.ndarray]):
@@ -175,7 +164,6 @@ class FlowerClient(fl.client.NumPyClient):
         # Plot results
         plt.figure(figsize=(8, 8), dpi=150)
         plt.plot(self.index, np.concatenate((y_train, y_test), axis=0), label='Reported cases', c='black')
-        # plt.plot(data_df.index, torch.cat((y_train, y_test), dim=0).numpy(), label='Data')
         plt.plot(self.index[:len(y_pred_train)], y_pred_train, label='FL-LSTM prediction (Train)')
         plt.plot(self.index[len(y_pred_train):], y_pred_test, label='FL-LSTM prediction (Test)')
         plt.title('FL-LSTM Prediction')
