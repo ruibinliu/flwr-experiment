@@ -25,6 +25,7 @@ def load_datasets(region, use_all=False):
     data_df = pd.read_excel('data/input/c19_data_for_FL.xlsx', sheet_name=region, index_col='Date')
 
     if use_all:
+        # TODO merge all the X_train from all regions
         # Use data from all regions as input
         dfs = []
         # new_input_cols = []
@@ -70,7 +71,7 @@ def load_datasets(region, use_all=False):
     # 从第8天开始，每个时间步的特征包含过去7天的数据
     window_size = CONFIG['window_size']
     for i in range(window_size, len(data)):
-        feature = data[i - window_size:i]  # 过去7天的数据
+        feature = data[i - window_size:i]  # 过去7天的数据  # Alternative: use np.clip
         features.append(feature.flatten())
     X = np.array(features)
     y = target[window_size:]
