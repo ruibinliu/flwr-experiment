@@ -1,6 +1,6 @@
 # Project setup
 ```
-pip install flwr==1.7.0
+pip install flwr==1.8.0
 pip install matplotlib==3.8.4
 pip install openpyxl==3.1.2
 pip install pandas==2.2.2

@@ -14,7 +14,8 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 import torch
 import torch.nn as nn
 
-from model import LSTM
+from config import CONFIG
+from model import LSTM, EarlyStopping
 from performance import save_performance, smape
 from data_loader import load_datasets
 
@@ -28,24 +29,21 @@ time_str = datetime.now().strftime('%m/%d_%H%M%S')
 output_dir = f'data/output/{time_str}'
 os.makedirs(output_dir)
 
-REGIONS = ['Portugal', 'Guangdong', 'Macau']
-input_cols = ['NewCases']
-input_cols_all = [c + '_' + r for c in input_cols for r in REGIONS]
-output_col = ['NewCases']
+# input_cols_all = [c + '_' + r for c in input_cols for r in REGIONS]
 
 MODEL_LSTM = 'LSTM'
 MODEL_A_LSTM = 'A_LSTM'
 MODEL_FL_LSTM = 'FL_LSTM'
 
 # Define the Hyper Parameters
-input_size = len(input_cols)
-input_size_all = len(input_cols_all)
-hidden_size = 64
-num_layers = 2
-output_size = 1
-num_epochs = 200
-learning_rate = 0.01
-dropout = 0.0  # Dropout probability
+# input_size = CONFIG['window_size']
+# input_size_all = len(input_cols_all)
+# hidden_size = 64
+# num_layers = 2
+# output_size = 1
+# num_epochs = 200
+# learning_rate = 0.01
+# dropout = 0.0  # Dropout probability
 
 
 def set_parameters(model, parameters: List[np.ndarray]):
@@ -64,9 +62,9 @@ class FlowerClient(fl.client.NumPyClient):
         self.index, self.x_train, self.x_test, self.y_train, self.y_test, self.scaler = load_datasets(region)
 
         # Initialize model, loss function, and optimizer
-        self.model = LSTM(input_size, hidden_size, num_layers, output_size, dropout=dropout)
+        self.model = LSTM(CONFIG['window_size'], CONFIG['hidden_size'], CONFIG['num_layers'], len(CONFIG['output_col']), dropout=CONFIG['dropout'])
         self.criterion = nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=CONFIG['learning_rate'])
 
     def get_parameters(self, config):
         print(f'FlowerClient: get_parameters')
@@ -81,19 +79,27 @@ class FlowerClient(fl.client.NumPyClient):
         # Set the model to training mode
         self.model.train()
         train_losses = []
+        early_stopping = EarlyStopping(patience=CONFIG['patience'], verbose=True, path=f'checkpoint_{self.region}.pt')
         # Training loop
-        for epoch in range(num_epochs):
+        for epoch in range(CONFIG['num_epochs']):
             outputs = self.model(self.x_train)
             self.optimizer.zero_grad()
             # add unsqueeze(1) to match the expected target shape
             loss = self.criterion(outputs, self.y_train.unsqueeze(1))
             loss.backward()
+            # Apply model changes
             self.optimizer.step()
-            # print(f'FL-LSTM before append: len(self.train_losses)={len(self.train_losses)}')
             train_losses.append(loss.item())
-            # print(f'FL-LSTM after append: len(self.train_losses)={len(self.train_losses)}')
-            if (epoch + 1) % 100 == 0:
-                print(f'Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item():.4f}')
+
+            # Check EarlyStopping
+            early_stopping(loss, self.model)
+
+            if early_stopping.early_stop:
+                print("Early stopping")
+                break
+
+        # Load the last checkpoint with the best model
+        self.model.load_state_dict(torch.load(early_stopping.path))
 
         end_time = time.time()
         total_time = round(end_time - start_time, 1)

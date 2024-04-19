@@ -1,15 +1,16 @@
+import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 
-REGIONS = ['Portugal', 'Guangdong', 'Macau']
-input_cols = ['NewCases']
-input_cols_all = [c + '_' + r for c in input_cols for r in REGIONS]
+from config import CONFIG
+
+input_cols = CONFIG['input_cols']
+input_cols_all = [c + '_' + r for c in input_cols for r in CONFIG['regions']]
 output_col = ['NewCases']
-MOV_AVG_WIN = 3
-time_lag = 1
+MOV_AVG_WIN = 7
 DAY_MODE = '1D'
 
 '''
@@ -27,7 +28,7 @@ def load_datasets(region, use_all=False):
         # Use data from all regions as input
         dfs = []
         # new_input_cols = []
-        for r in REGIONS:
+        for r in CONFIG['regions']:
             df = pd.read_excel('data/input/c19_data_for_FL.xlsx', sheet_name=r, index_col='Date')
             # new_input_cols.extend([col + '_' + r for col in input_cols])
 
@@ -57,21 +58,31 @@ def load_datasets(region, use_all=False):
     data = data_df[input_cols_all if use_all else input_cols].values
     target = data_df[output_col].values
 
-    # Align the data
-    # TODO Use the previous few days sliding window, e.g. 7 days, to predict the next day
-    # TODO Use figure to show the performance difference
-    data = data[0:-time_lag]
-    target = target[time_lag:]
-    data_df = data_df[time_lag:]
-
-    print(f'load_datasets: data.shape={data.shape}')
-    print(f'load_datasets: target.shape={target.shape}')
-
     # Normalize data
     # TODO check the min-max scaler, e.g. consider [0, 1000]
     scaler = MinMaxScaler()
-    X = scaler.fit_transform(data)
-    y = scaler.fit_transform(target.reshape(-1, 1)).flatten()
+    data = scaler.fit_transform(data)
+    target = scaler.fit_transform(target.reshape(-1, 1)).flatten()
+
+    # Align the data
+    # Use the previous few days sliding window, e.g. 7 days, to predict the next day
+    # TODO Use figure to show the performance difference
+    features = []
+    # 从第8天开始，每个时间步的特征包含过去7天的数据
+    window_size = CONFIG['window_size']
+    for i in range(window_size, len(data)):
+        feature = data[i - window_size:i]  # 过去7天的数据
+        features.append(feature.flatten())
+    X = np.array(features)
+    y = target[window_size:]
+    data_df = data_df[window_size:]
+
+    # data = data[0:-time_lag]
+    # target = target[time_lag:]
+    # data_df = data_df[time_lag:]
+
+    print(f'load_datasets: data.shape={X.shape}')
+    print(f'load_datasets: target.shape={y.shape}')
 
     # Train-test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=False)
