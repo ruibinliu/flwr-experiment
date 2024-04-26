@@ -9,7 +9,7 @@ from config import CONFIG
 
 input_cols = CONFIG['input_cols']
 input_cols_all = [c + '_' + r for c in input_cols for r in CONFIG['regions']]
-output_col = ['NewCases']
+output_col = CONFIG['output_col']
 MOV_AVG_WIN = 7
 DAY_MODE = '1D'
 
@@ -22,8 +22,6 @@ OMICRON_START_COLS = 672 - MOV_AVG_WIN
 
 def load_datasets(region, use_all=False):
     # Load data from Excel
-    data_df = pd.read_excel('data/input/c19_data_for_FL.xlsx', sheet_name=region, index_col='Date')
-
     if use_all:
         # TODO merge all the X_train from all regions
         # Use data from all regions as input
@@ -32,6 +30,8 @@ def load_datasets(region, use_all=False):
         for r in CONFIG['regions']:
             df = pd.read_excel('data/input/c19_data_for_FL.xlsx', sheet_name=r, index_col='Date')
 
+            df = df[OMICRON_START_COLS:]  # Ignore data prior to the first reported Omicron case
+            '''
             rename_columns = {old: new for old, new in [(col, col + '_' + r) for col in input_cols]}
             if r == region:
                 # Avoid rename target columns for the current region
@@ -40,11 +40,13 @@ def load_datasets(region, use_all=False):
             else:
                 df = df[input_cols]
                 df.rename(columns=rename_columns, inplace=True)
+            '''
             dfs.append(df)
-        data_df = pd.concat([df for df in dfs], axis=1)
+        data_df = pd.concat([df for df in dfs])
         # input_cols = new_input_cols
-
-    data_df = data_df[OMICRON_START_COLS:]  # Ignore data prior to the first reported Omicron case
+    else:
+        data_df = pd.read_excel('data/input/c19_data_for_FL.xlsx', sheet_name=region, index_col='Date')
+        data_df = data_df[OMICRON_START_COLS:]  # Ignore data prior to the first reported Omicron case
 
     # Compute moving average
     for key in data_df.keys():
@@ -55,7 +57,7 @@ def load_datasets(region, use_all=False):
     # data_df = data_df[0:experiment_index * EXPERIMENT_STEP_SIZE + time_lag]
 
     data_df = data_df.resample(DAY_MODE).mean()  # Resample data on weekly basis, taking mean
-    data = data_df[input_cols_all if use_all else input_cols].values
+    data = data_df[input_cols].values
     target = data_df[output_col].values
 
     # Normalize data
