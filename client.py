@@ -10,7 +10,7 @@ import flwr as fl
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import torch
 import torch.nn as nn
 
@@ -26,7 +26,7 @@ if torch.cuda.is_available():
 
 # Create output folder
 time_str = datetime.now().strftime('%m/%d_%H%M%S')
-output_dir = f'data/output/{time_str}'
+output_dir = f'data/output/{time_str}_fl'
 os.makedirs(output_dir)
 
 
@@ -143,6 +143,7 @@ class FlowerClient(fl.client.NumPyClient):
         s_mape = smape(y_test, y_pred_test).astype(float)
         rmse = sqrt(mean_squared_error(y_test, y_pred_test))
         mae = mean_absolute_error(y_test, y_pred_test).astype(float)
+        r2 = r2_score(y_test, y_pred_test)
         print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape:.2f}')
 
         # self.performance.append((rmse, mae, s_mape))
@@ -156,7 +157,7 @@ class FlowerClient(fl.client.NumPyClient):
         index_of_test_begin = self.index[len(self.x_train)].strftime('%Y-%m-%d')
         index_of_test_end = index_of_dataset_end
 
-        save_performance(output_dir, self.region, rmse, mae, s_mape, MODEL_FL_LSTM,
+        save_performance(output_dir, self.region, rmse, mae, s_mape, r2, MODEL_FL_LSTM,
                          index_of_dataset_begin, index_of_dataset_end,
                          index_of_train_begin, index_of_train_end,
                          index_of_test_begin, index_of_test_end)

@@ -9,7 +9,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from matplotlib import pyplot as plt
-from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 from config import CONFIG
 from data_loader import load_datasets
@@ -18,7 +18,7 @@ from performance import save_performance, smape
 
 MODEL_NAME = 'LSTM'
 time_str = datetime.now().strftime('%m/%d_%H%M%S')
-output_dir = f'data/output/{time_str}'
+output_dir = f'data/output/{time_str}_local'
 os.makedirs(output_dir)
 
 # Set random seed
@@ -86,6 +86,7 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler):
     rmse = sqrt(mean_squared_error(y_test, y_pred_test))
     mae = mean_absolute_error(y_test, y_pred_test)
     s_mape = smape(y_test, y_pred_test)
+    r2 = r2_score(y_test, y_pred_test)
     print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape}:.2f')
 
     end_time = time.time()
@@ -98,7 +99,7 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler):
     index_of_test_begin = index[len(x_train)].strftime('%Y-%m-%d')
     index_of_test_end = index_of_dataset_end
 
-    save_performance(output_dir, region, rmse, mae, s_mape, MODEL_NAME,
+    save_performance(output_dir, region, rmse, mae, s_mape, r2, MODEL_NAME,
                      index_of_dataset_begin, index_of_dataset_end,
                      index_of_train_begin, index_of_train_end,
                      index_of_test_begin, index_of_test_end)

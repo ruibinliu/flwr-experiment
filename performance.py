@@ -16,7 +16,7 @@ def smape(y_true, y_pred):
         return -1
 
 
-def save_performance(output_dir, region, rmse, mae, smape, model, index_of_dataset_begin, index_of_dataset_end,
+def save_performance(output_dir, region, rmse, mae, smape, r2, model, index_of_dataset_begin, index_of_dataset_end,
                      index_of_train_begin, index_of_train_end,
                      index_of_test_begin, index_of_test_end):
     # Load existing Excel file or create a new one if it doesn't exist
@@ -27,10 +27,9 @@ def save_performance(output_dir, region, rmse, mae, smape, model, index_of_datas
     except FileNotFoundError:
         wb = Workbook()
         ws = wb.active
-        ws.append(['Region', 'RMSE', 'MAE', 'SMAPE', 'Model',
-                   'Start_date', 'End_date', 'Train_start', 'Train_end', 'Test_start', 'Test_end'])
-    ws.append([region, rmse, mae, smape, model,
-               index_of_dataset_begin, index_of_dataset_end,
+        ws.append(['Region', 'RMSE', 'MAE', 'SMAPE', 'R2', 'Model',
+                   'Train_start', 'Train_end', 'Test_start', 'Test_end'])
+    ws.append([region, rmse, mae, smape, r2, model,
                index_of_train_begin, index_of_train_end,
                index_of_test_begin, index_of_test_end])
     wb.save(file_path)
