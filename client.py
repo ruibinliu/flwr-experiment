@@ -10,7 +10,7 @@ import flwr as fl
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error  # , r2_score
 import torch
 import torch.nn as nn
 
@@ -33,6 +33,28 @@ os.makedirs(output_dir)
 MODEL_LSTM = 'LSTM'
 MODEL_A_LSTM = 'A_LSTM'
 MODEL_FL_LSTM = 'FL_LSTM'
+
+
+def r2_score(y_true, y_pred):
+    """
+    Compute R square score
+
+    Parameters:
+    y_true -- Actual value
+    y_pred -- Predicted value
+
+    Return:
+    R square score
+    """
+    # Compute average value
+    y_true_mean = np.mean(y_true)
+
+    # Compute R square score
+    numerator = np.sum((y_true - y_pred) ** 2)
+    denominator = np.sum((y_true - y_true_mean) ** 2)
+    r2 = 1 - (numerator / denominator)
+
+    return r2
 
 
 def set_parameters(model, parameters: List[np.ndarray]):
@@ -192,8 +214,17 @@ if __name__ == "__main__":
         required=True,
         help="Specifies the Client ID",
     )
+    parser.add_argument(
+        "-e",
+        "--epoch",
+        type=int,
+        choices=range(1, 10000),
+        required=True,
+        help="Specifies the max number of epoches",
+    )
     args = parser.parse_args()
     region = REGIONS[args.node_id]
+    CONFIG['num_epochs'] = args.epoch
     print(f'Flower client started for region [{region}].')
 
     # Start Flower client

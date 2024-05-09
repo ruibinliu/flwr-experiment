@@ -75,7 +75,7 @@ def load_datasets(region, use_all=False):
 
         # Normalize data
         # TODO check the min-max scaler, e.g. consider [0, 1000]
-        scaler = MinMaxScaler()
+        scaler = MinMaxScaler()  # feature_range=(0, 1000)
         data = scaler.fit_transform(data)
         target = scaler.fit_transform(target.reshape(-1, 1)).flatten()
 

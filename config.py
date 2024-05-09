@@ -5,7 +5,7 @@ CONFIG = {
     'output_col': ['NewCases'],
 
     # LSTM Hyper Parameters
-    'num_epochs': 1,
+    'num_epochs': 1000,
     'hidden_size': 64,
     'num_layers': 2,
     'dropout': 0,
