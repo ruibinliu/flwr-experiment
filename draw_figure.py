@@ -5,6 +5,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 
+from config import CONFIG
+
 # Create output folder
 time_str = datetime.now().strftime('%m/%d_%H%M%S')
 output_dir = f'data/output/{time_str}_fl'
@@ -16,24 +18,24 @@ if not os.path.exists(output_dir):
 # df_gd = pd.read_excel(f'data/output/04/26_155817_local/performance_Macau.xlsx', sheet_name='Guangdong')
 # scaler 0, 1, epoch=1
 df_pt = pd.read_excel(f'data/output/05/09_110222_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-df_gd = pd.read_excel(f'data/output/05/09_110237_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-df_mo = pd.read_excel(f'data/output/05/09_110242_fl/performance_Macau.xlsx', sheet_name='Sheet')
+df_gd = pd.read_excel(f'data/output/05/09_110222_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
+df_mo = pd.read_excel(f'data/output/05/09_110222_fl/performance_Macau.xlsx', sheet_name='Sheet')
 # scaler 0, 1, epoch=2
 # df_pt = pd.read_excel(f'data/output/05/09_111638_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-# df_gd = pd.read_excel(f'data/output/05/09_111648_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-# df_mo = pd.read_excel(f'data/output/05/09_111657_fl/performance_Macau.xlsx', sheet_name='Sheet')
+# df_gd = pd.read_excel(f'data/output/05/09_111638_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
+# df_mo = pd.read_excel(f'data/output/05/09_111638_fl/performance_Macau.xlsx', sheet_name='Sheet')
 # scaler 0, 1, epoch=3
 # df_pt = pd.read_excel(f'data/output/05/09_112617_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-# df_gd = pd.read_excel(f'data/output/05/09_112625_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-# df_mo = pd.read_excel(f'data/output/05/09_112709_fl/performance_Macau.xlsx', sheet_name='Sheet')
+# df_gd = pd.read_excel(f'data/output/05/09_112617_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
+# df_mo = pd.read_excel(f'data/output/05/09_112717_fl/performance_Macau.xlsx', sheet_name='Sheet')
 # scaler 0, 1, epoch=4
 # df_pt = pd.read_excel(f'data/output/05/09_113207_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-# df_gd = pd.read_excel(f'data/output/05/09_113211_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-# df_mo = pd.read_excel(f'data/output/05/09_113216_fl/performance_Macau.xlsx', sheet_name='Sheet')
+# df_gd = pd.read_excel(f'data/output/05/09_113207_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
+# df_mo = pd.read_excel(f'data/output/05/09_113207_fl/performance_Macau.xlsx', sheet_name='Sheet')
 # scaler 0, 1, epoch=5
 # df_pt = pd.read_excel(f'data/output/05/09_115914_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-# df_gd = pd.read_excel(f'data/output/05/09_115921_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-# df_mo = pd.read_excel(f'data/output/05/09_115926_fl/performance_Macau.xlsx', sheet_name='Sheet')
+# df_gd = pd.read_excel(f'data/output/05/09_115914_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
+# df_mo = pd.read_excel(f'data/output/05/09_115914_fl/performance_Macau.xlsx', sheet_name='Sheet')
 # scaler 0, 1000
 # df_mo = pd.read_excel(f'data/output/05/09_151256_fl/performance_Portugal.xlsx', sheet_name='Sheet')
 # df_pt = pd.read_excel(f'data/output/05/09_151301_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
@@ -129,6 +131,10 @@ def draw_rounds():
     plt.savefig(f'{output_dir}/performance-rounds.png')
     plt.cla()
     plt.close()
+
+    with open(f'{output_dir}/config.txt', 'w') as file:
+        for key, value in CONFIG.items():
+            file.write(f'{key}={value}\n')
 
 
 if __name__ == '__main__':
