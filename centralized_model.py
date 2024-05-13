@@ -133,5 +133,8 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler):
 
 if __name__ == '__main__':
     for region in CONFIG['regions']:
+        t0 = time.time()
         index, x_train, x_test, y_train, y_test, scaler = load_datasets(region, use_all=True)
         lstm_model = lstm(region, index, x_train, x_test, y_train, y_test, scaler)
+        t1 = time.time()
+        print(f'C-LSTM({region}) cost {round(t1 - t0, 3)} seconds.')
