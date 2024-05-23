@@ -9,16 +9,18 @@ def smape(y_true, y_pred):
     try:
         n = len(y_true)
         numerator = np.abs(y_pred - y_true)
-        denominator = (np.abs(y_true) + np.abs(y_pred)) / 2
+        denominator = (np.abs(y_true) + np.abs(y_pred))  # / 2
         smape = np.sum(numerator / denominator) * (100.0 / n)
         return smape
     except:
         return -1
 
 
-def save_performance(output_dir, region, rmse, mae, smape, r2, model, index_of_dataset_begin, index_of_dataset_end,
+def save_performance(output_dir, region, rmse, rmse_normalized_global, rmse_normalized_test,
+                     mae, mae_normalized_global, mae_normalized_test,
+                     smape, r2, model, index_of_dataset_begin, index_of_dataset_end,
                      index_of_train_begin, index_of_train_end,
-                     index_of_test_begin, index_of_test_end):
+                     index_of_test_begin, index_of_test_end, ahead=0):
     # Load existing Excel file or create a new one if it doesn't exist
     file_path = f'{output_dir}/performance_{region}.xlsx'
     try:
@@ -27,9 +29,14 @@ def save_performance(output_dir, region, rmse, mae, smape, r2, model, index_of_d
     except FileNotFoundError:
         wb = Workbook()
         ws = wb.active
-        ws.append(['Region', 'RMSE', 'MAE', 'SMAPE', 'R2', 'Model',
-                   'Train_start', 'Train_end', 'Test_start', 'Test_end'])
-    ws.append([region, rmse, mae, smape, r2, model,
+        ws.append(['Region', 'RMSE', 'RMSE_all', 'RMSE_test',
+                   'MAE', 'MAE_all', 'MAE_test',
+                   'SMAPE', 'R2', 'Model',
+                   'Train_start', 'Train_end', 'Test_start', 'Test_end', 'Ahead'])
+    ws.append([region,
+               rmse, rmse_normalized_global, rmse_normalized_test,
+               mae, mae_normalized_global, mae_normalized_test,
+               smape, r2, model,
                index_of_train_begin, index_of_train_end,
-               index_of_test_begin, index_of_test_end])
+               index_of_test_begin, index_of_test_end, ahead + 1])
     wb.save(file_path)

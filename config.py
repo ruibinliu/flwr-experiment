@@ -1,8 +1,10 @@
 CONFIG = {
     # Load data
-    'window_size': 7,
+    'moving_average': 7,  # Smooth the original data
     'input_cols': ['NewCases'],
     'output_col': ['NewCases'],
+    'input_len': 7,  # Use $input_len previous data as input.
+    'output_len': 7,  # Predict the next 7 days
 
     # LSTM Hyper Parameters
     'num_epochs': 1000,

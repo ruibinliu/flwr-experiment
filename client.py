@@ -73,7 +73,7 @@ class FlowerClient(fl.client.NumPyClient):
         self.index, self.x_train, self.x_test, self.y_train, self.y_test, self.scaler = load_datasets(region)
 
         # Initialize model, loss function, and optimizer
-        self.model = LSTM(CONFIG['window_size'], CONFIG['hidden_size'], CONFIG['num_layers'], len(CONFIG['output_col']), dropout=CONFIG['dropout'])
+        self.model = LSTM(CONFIG['input_len'], CONFIG['hidden_size'], CONFIG['num_layers'], len(CONFIG['output_col']), dropout=CONFIG['dropout'])
         self.criterion = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=CONFIG['learning_rate'])
 
@@ -90,7 +90,7 @@ class FlowerClient(fl.client.NumPyClient):
         # Set the model to training mode
         self.model.train()
         train_losses = []
-        early_stopping = EarlyStopping(patience=CONFIG['patience'], verbose=True, path=f'checkpoint_{self.region}.pt')
+        early_stopping = EarlyStopping(patience=CONFIG['patience'], verbose=False, path=f'checkpoint_{self.region}.pt')
         # Training loop
         for epoch in range(CONFIG['num_epochs']):
             outputs = self.model(self.x_train)
@@ -164,7 +164,11 @@ class FlowerClient(fl.client.NumPyClient):
         loss = self.criterion(torch.tensor(y_pred_test), torch.tensor(y_test))
         s_mape = smape(y_test, y_pred_test).astype(float)
         rmse = sqrt(mean_squared_error(y_test, y_pred_test))
+        rmse_normalized_global = rmse / max(max(y_train), max(y_test))
+        rmse_normalized_test = rmse / max(y_test)
         mae = mean_absolute_error(y_test, y_pred_test).astype(float)
+        mae_normalized_global = rmse / max(max(y_train), max(y_test))
+        mae_normalized_test = rmse / max(y_test)
         r2 = r2_score(y_test, y_pred_test)
         print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape:.2f}')
 
@@ -179,7 +183,10 @@ class FlowerClient(fl.client.NumPyClient):
         index_of_test_begin = self.index[len(self.x_train)].strftime('%Y-%m-%d')
         index_of_test_end = index_of_dataset_end
 
-        save_performance(output_dir, self.region, rmse, mae, s_mape, r2, MODEL_FL_LSTM,
+        save_performance(output_dir, self.region,
+                         rmse, rmse_normalized_global, rmse_normalized_test,
+                         mae, mae_normalized_global, mae_normalized_test,
+                         s_mape, r2, MODEL_FL_LSTM,
                          index_of_dataset_begin, index_of_dataset_end,
                          index_of_train_begin, index_of_train_end,
                          index_of_test_begin, index_of_test_end)

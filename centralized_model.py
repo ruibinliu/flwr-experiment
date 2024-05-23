@@ -16,7 +16,7 @@ from data_loader import load_datasets
 from model import EarlyStopping, LSTM
 from performance import save_performance, smape
 
-MODEL_NAME = 'LSTM'
+MODEL_NAME = 'C-LSTM'
 time_str = datetime.now().strftime('%m/%d_%H%M%S')
 output_dir = f'data/output/{time_str}_centralized'
 os.makedirs(output_dir)
@@ -29,18 +29,18 @@ random.seed(42)
 np.random.seed(42)
 
 
-def lstm(region, index, x_train, x_test, y_train, y_test, scaler):
+def lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=0):
     start_time = time.time()
 
     # Initialize model, loss function, and optimizer
-    model = LSTM(CONFIG['window_size'], CONFIG['hidden_size'], CONFIG['num_layers'], len(CONFIG['output_col']),
+    model = LSTM(CONFIG['input_len'], CONFIG['hidden_size'], CONFIG['num_layers'], len(CONFIG['output_col']),
                  dropout=CONFIG['dropout'])
     criterion = nn.MSELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
 
     model.train()
     train_losses = []
-    early_stopping = EarlyStopping(patience=CONFIG['patience'], verbose=True)
+    early_stopping = EarlyStopping(patience=CONFIG['patience'], verbose=False)
     # Training loop
     for epoch in range(CONFIG['num_epochs']):
         outputs = model(x_train)
@@ -78,13 +78,18 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler):
     y_pred_train = scaler.inverse_transform(y_pred_train.detach().numpy().reshape(-1, 1)).flatten()
     y_pred_test = scaler.inverse_transform(y_pred_test.detach().numpy().reshape(-1, 1)).flatten()
 
-    df_pred = pd.concat(
-        [pd.DataFrame(y_pred_train, index=index[:len(x_train)]), pd.DataFrame(y_pred_test, index=index[len(x_train):])])
+    y_pred_train = pd.Series(y_pred_train, index=index[ahead:len(x_train) + ahead])
+    y_pred_test = pd.Series(y_pred_test, index=index[len(x_train) + ahead:])
+    df_pred = pd.concat([pd.DataFrame(y_pred_train), pd.DataFrame(y_pred_test)])
     df_pred.to_excel(f'{output_dir}/predit_data-{region}-{MODEL_NAME}.xlsx')
 
-    loss = criterion(torch.tensor(y_pred_test), torch.tensor(y_test))
+    loss = criterion(torch.tensor(y_pred_test.to_numpy()), torch.tensor(y_test))
     rmse = sqrt(mean_squared_error(y_test, y_pred_test))
+    rmse_normalized_global = rmse / max(max(y_train), max(y_test))
+    rmse_normalized_test = rmse / max(y_test)
     mae = mean_absolute_error(y_test, y_pred_test)
+    mae_normalized_global = rmse / max(max(y_train), max(y_test))
+    mae_normalized_test = rmse / max(y_test)
     s_mape = smape(y_test, y_pred_test)
     r2 = r2_score(y_test, y_pred_test)
     print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape}:.2f')
@@ -99,19 +104,22 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler):
     index_of_test_begin = ''
     index_of_test_end = ''
 
-    save_performance(output_dir, region, rmse, mae, s_mape, r2, MODEL_NAME,
+    save_performance(output_dir, region,
+                     rmse, rmse_normalized_global, rmse_normalized_test,
+                     mae, mae_normalized_global, mae_normalized_test,
+                     s_mape, r2, MODEL_NAME,
                      index_of_dataset_begin, index_of_dataset_end,
                      index_of_train_begin, index_of_train_end,
-                     index_of_test_begin, index_of_test_end)
+                     index_of_test_begin, index_of_test_end, ahead)
 
     # Plot results
     fig, axs = plt.subplots(2, 1, figsize=(8, 8))
 
-    axs[0].plot(index, np.concatenate((y_train, y_test), axis=0), label='Reported cases', c='black')
+    axs[0].plot(index[ahead:], np.concatenate((y_train, y_test), axis=0), label='Reported cases', c='black')
     # plt.plot(data_df.index, torch.cat((y_train, y_test), dim=0).numpy(), label='Data')
-    axs[0].plot(index[:len(y_pred_train)], y_pred_train, label='LSTM predicted (Train)')
-    axs[0].plot(index[len(y_pred_train):], y_pred_test, label='LSTM predicted (Test)')
-    axs[0].set_title('LSTM Prediction')
+    axs[0].plot(y_pred_train, label=f'{MODEL_NAME} predicted (Train)')
+    axs[0].plot(y_pred_test, label=f'{MODEL_NAME} predicted (Test)')
+    axs[0].set_title(f'{MODEL_NAME} Prediction')
     axs[0].set_xlabel('Time')
     axs[0].set_ylabel('Number of reported cases')
     axs[0].legend()
@@ -133,8 +141,9 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler):
 
 if __name__ == '__main__':
     for region in CONFIG['regions']:
-        t0 = time.time()
-        index, x_train, x_test, y_train, y_test, scaler = load_datasets(region, use_all=True)
-        lstm_model = lstm(region, index, x_train, x_test, y_train, y_test, scaler)
-        t1 = time.time()
-        print(f'C-LSTM({region}) cost {round(t1 - t0, 3)} seconds.')
+        for ahead in range(0, CONFIG['output_len']):
+            t0 = time.time()
+            index, x_train, x_test, y_train, y_test, scaler = load_datasets(region, use_all=True, ahead=ahead)
+            lstm_model = lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=ahead)
+            t1 = time.time()
+            print(f'C-LSTM({region}) cost {round(t1 - t0, 3)} seconds.')
