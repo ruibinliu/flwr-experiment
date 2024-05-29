@@ -70,7 +70,7 @@ def get_parameters(model) -> List[np.ndarray]:
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, region):
         self.region = region
-        self.index, self.x_train, self.x_test, self.y_train, self.y_test, self.scaler = load_datasets(region)
+        self.index, self.x_train, self.x_test, self.y_train, self.y_test, self.scaler = load_datasets(region, ahead=1)
 
         # Initialize model, loss function, and optimizer
         self.model = LSTM(CONFIG['input_len'], CONFIG['hidden_size'], CONFIG['num_layers'], len(CONFIG['output_col']), dropout=CONFIG['dropout'])
