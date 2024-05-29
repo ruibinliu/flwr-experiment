@@ -18,7 +18,8 @@ DAY_MODE = '1D'
 Omicron first reported on 2021-11-24. https://www.who.int/news/item/26-11-2021-classification-of-omicron-(b.1.1.529)-sars-cov-2-variant-of-concern
 We minus the "MOV_AVG_WIN" because these rows has not enough previous data to compute the moving average
 '''
-OMICRON_START_COLS = 672 - MOV_AVG_WIN
+# OMICRON_START_COLS = 672 - MOV_AVG_WIN
+OMICRON_START_COLS = 24 - MOV_AVG_WIN - CONFIG['input_len']
 
 
 def load_datasets(region, use_all=False, ahead=0):
@@ -33,7 +34,7 @@ def load_datasets(region, use_all=False, ahead=0):
     return_scaler = None
 
     for r in regions:
-        data_df = pd.read_excel('data/input/c19_data_for_FL.xlsx', sheet_name=r, index_col='Date')
+        data_df = pd.read_excel(CONFIG['data_path'], sheet_name=r, index_col='Date')
         data_df = data_df[OMICRON_START_COLS:]  # Ignore data prior to the first reported Omicron case
 
         # Compute moving average

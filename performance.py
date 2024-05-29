@@ -16,8 +16,8 @@ def smape(y_true, y_pred):
         return -1
 
 
-def save_performance(output_dir, region, rmse, rmse_normalized_global, rmse_normalized_test,
-                     mae, mae_normalized_global, mae_normalized_test,
+def save_performance(output_dir, region, rmse, rmse_normalized,
+                     mae, mae_normalized,
                      smape, r2, model, index_of_dataset_begin, index_of_dataset_end,
                      index_of_train_begin, index_of_train_end,
                      index_of_test_begin, index_of_test_end, ahead=0):
@@ -29,13 +29,13 @@ def save_performance(output_dir, region, rmse, rmse_normalized_global, rmse_norm
     except FileNotFoundError:
         wb = Workbook()
         ws = wb.active
-        ws.append(['Region', 'RMSE', 'RMSE_all', 'RMSE_test',
-                   'MAE', 'MAE_all', 'MAE_test',
+        ws.append(['Region', 'RMSE', 'RMSE_normalized',
+                   'MAE', 'MAE_normalized',
                    'SMAPE', 'R2', 'Model',
                    'Train_start', 'Train_end', 'Test_start', 'Test_end', 'Ahead'])
     ws.append([region,
-               rmse, rmse_normalized_global, rmse_normalized_test,
-               mae, mae_normalized_global, mae_normalized_test,
+               rmse, rmse_normalized,
+               mae, mae_normalized,
                smape, r2, model,
                index_of_train_begin, index_of_train_end,
                index_of_test_begin, index_of_test_end, ahead + 1])

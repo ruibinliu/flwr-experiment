@@ -85,11 +85,9 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=0):
 
     loss = criterion(torch.tensor(y_pred_test), torch.tensor(y_test))
     rmse = sqrt(mean_squared_error(y_test, y_pred_test))
-    rmse_normalized_global = rmse / max(max(y_train), max(y_test))
-    rmse_normalized_test = rmse / max(y_test)
+    rmse_normalized = rmse / max(max(y_train), max(y_test))
     mae = mean_absolute_error(y_test, y_pred_test)
-    mae_normalized_global = rmse / max(max(y_train), max(y_test))
-    mae_normalized_test = rmse / max(y_test)
+    mae_normalized = mae / max(max(y_train), max(y_test))
     s_mape = smape(y_test, y_pred_test)
     r2 = r2_score(y_test, y_pred_test)
     print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape}:.2f')
@@ -105,8 +103,8 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=0):
     index_of_test_end = index_of_dataset_end
 
     save_performance(output_dir, region,
-                     rmse, rmse_normalized_global, rmse_normalized_test,
-                     mae, mae_normalized_global, mae_normalized_test,
+                     rmse, rmse_normalized,
+                     mae, mae_normalized,
                      s_mape, r2, MODEL_NAME,
                      index_of_dataset_begin, index_of_dataset_end,
                      index_of_train_begin, index_of_train_end,
@@ -140,7 +138,6 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=0):
 
 
 if __name__ == '__main__':
-    ahead = 1
     for region in CONFIG['regions']:
         for ahead in range(0, CONFIG['output_len']):
             t0 = time.time()

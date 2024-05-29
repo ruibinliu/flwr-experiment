@@ -10,7 +10,7 @@ import flwr as fl
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.metrics import mean_squared_error, mean_absolute_error  # , r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import torch
 import torch.nn as nn
 
@@ -24,37 +24,13 @@ DEVICE = torch.device("cpu")  # Try "cuda" to train on GPU
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda")
 
-# Create output folder
-time_str = datetime.now().strftime('%m/%d_%H%M%S')
-output_dir = f'data/output/{time_str}_fl'
-os.makedirs(output_dir)
-
+ahead = 1
 
 MODEL_LSTM = 'LSTM'
 MODEL_A_LSTM = 'A_LSTM'
 MODEL_FL_LSTM = 'FL_LSTM'
 
-
-def r2_score(y_true, y_pred):
-    """
-    Compute R square score
-
-    Parameters:
-    y_true -- Actual value
-    y_pred -- Predicted value
-
-    Return:
-    R square score
-    """
-    # Compute average value
-    y_true_mean = np.mean(y_true)
-
-    # Compute R square score
-    numerator = np.sum((y_true - y_pred) ** 2)
-    denominator = np.sum((y_true - y_true_mean) ** 2)
-    r2 = 1 - (numerator / denominator)
-
-    return r2
+time_str = datetime.now().strftime('%m/%d_%H%M%S')
 
 
 def set_parameters(model, parameters: List[np.ndarray]):
@@ -67,10 +43,18 @@ def get_parameters(model) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in model.state_dict().items()]
 
 
+def get_output_dir():
+    # Create output folder
+    output_dir = f'data/output/{time_str}_fl_ahead{ahead}'
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    return output_dir
+
+
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, region):
         self.region = region
-        self.index, self.x_train, self.x_test, self.y_train, self.y_test, self.scaler = load_datasets(region, ahead=1)
+        self.index, self.x_train, self.x_test, self.y_train, self.y_test, self.scaler = load_datasets(region, ahead)
 
         # Initialize model, loss function, and optimizer
         self.model = LSTM(CONFIG['input_len'], CONFIG['hidden_size'], CONFIG['num_layers'], len(CONFIG['output_col']), dropout=CONFIG['dropout'])
@@ -127,7 +111,7 @@ class FlowerClient(fl.client.NumPyClient):
         # Adjust layout
         # round = len(performance_result[region]) + 1
 
-        plt.savefig(f'{output_dir}/{self.region}-{MODEL_FL_LSTM}-loss')
+        plt.savefig(f'{get_output_dir()}/{self.region}-{MODEL_FL_LSTM}-loss')
         plt.cla()
         plt.close()
 
@@ -159,16 +143,14 @@ class FlowerClient(fl.client.NumPyClient):
 
         df_pred = pd.concat([pd.DataFrame(y_pred_train, index=self.index[:len(self.x_train)]),
                              pd.DataFrame(y_pred_test, index=self.index[len(self.x_train):])])
-        df_pred.to_excel(f'{output_dir}/predit_data-{self.region}-{MODEL_FL_LSTM}.xlsx')
+        df_pred.to_excel(f'{get_output_dir()}/predit_data-{self.region}-{MODEL_FL_LSTM}.xlsx')
 
         loss = self.criterion(torch.tensor(y_pred_test), torch.tensor(y_test))
         s_mape = smape(y_test, y_pred_test).astype(float)
         rmse = sqrt(mean_squared_error(y_test, y_pred_test))
-        rmse_normalized_global = rmse / max(max(y_train), max(y_test))
-        rmse_normalized_test = rmse / max(y_test)
+        rmse_normalized = rmse / max(max(y_train), max(y_test))
         mae = mean_absolute_error(y_test, y_pred_test).astype(float)
-        mae_normalized_global = rmse / max(max(y_train), max(y_test))
-        mae_normalized_test = rmse / max(y_test)
+        mae_normalized = mae / max(max(y_train), max(y_test))
         r2 = r2_score(y_test, y_pred_test)
         print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape:.2f}')
 
@@ -176,20 +158,27 @@ class FlowerClient(fl.client.NumPyClient):
         # new_rows = pd.DataFrame({'RMSE': [rmse], 'MAE': [mae], 'SMAPE': [s_mape]})
         # performance_result[region] = pd.concat([performance_result[region], new_rows], ignore_index=True)
 
-        index_of_dataset_begin = self.index[0].strftime('%Y-%m-%d')
-        index_of_dataset_end = self.index[-1].strftime('%Y-%m-%d')
-        index_of_train_begin = index_of_dataset_begin
-        index_of_train_end = self.index[len(self.x_train) - 1].strftime('%Y-%m-%d')
-        index_of_test_begin = self.index[len(self.x_train)].strftime('%Y-%m-%d')
-        index_of_test_end = index_of_dataset_end
+        # index_of_dataset_begin = self.index[0].strftime('%Y-%m-%d')
+        # index_of_dataset_end = self.index[-1].strftime('%Y-%m-%d')
+        # index_of_train_begin = index_of_dataset_begin
+        # index_of_train_end = self.index[len(self.x_train) - 1].strftime('%Y-%m-%d')
+        # index_of_test_begin = self.index[len(self.x_train)].strftime('%Y-%m-%d')
+        # index_of_test_end = index_of_dataset_end
+        index_of_dataset_begin = ''
+        index_of_dataset_end = ''
+        index_of_train_begin = ''
+        index_of_train_end = ''
+        index_of_test_begin = ''
+        index_of_test_end = ''
 
-        save_performance(output_dir, self.region,
-                         rmse, rmse_normalized_global, rmse_normalized_test,
-                         mae, mae_normalized_global, mae_normalized_test,
+        save_performance(get_output_dir(), self.region,
+                         rmse, rmse_normalized,
+                         mae, mae_normalized,
                          s_mape, r2, MODEL_FL_LSTM,
                          index_of_dataset_begin, index_of_dataset_end,
                          index_of_train_begin, index_of_train_end,
-                         index_of_test_begin, index_of_test_end)
+                         index_of_test_begin, index_of_test_end,
+                         ahead)
 
         # Plot results
         plt.figure(figsize=(8, 8), dpi=150)
@@ -200,7 +189,7 @@ class FlowerClient(fl.client.NumPyClient):
         plt.xlabel('Time')
         plt.ylabel('Number of reported cases')
         plt.legend()
-        plt.savefig(f'{output_dir}/{self.region}-{MODEL_FL_LSTM}')
+        plt.savefig(f'{get_output_dir()}/{self.region}-{MODEL_FL_LSTM}')
         plt.cla()
         plt.close()
 
@@ -219,7 +208,7 @@ if __name__ == "__main__":
         type=int,
         choices=range(1, N_CLIENTS + 1),
         required=True,
-        help="Specifies the Client ID",
+        help="Specify the Client ID",
     )
     parser.add_argument(
         "-e",
@@ -227,12 +216,22 @@ if __name__ == "__main__":
         type=int,
         choices=range(1, 10000),
         required=True,
-        help="Specifies the max number of epoches",
+        help="Specify the max number of epoches",
+    )
+    parser.add_argument(
+        "-a",
+        "--ahead",
+        type=int,
+        choices=range(1, 7),
+        required=True,
+        help="Specify the number of days ahead",
     )
     args = parser.parse_args()
     region = REGIONS[args.node_id]
     CONFIG['num_epochs'] = args.epoch
     print(f'Flower client started for region [{region}].')
+    ahead = args.ahead
+    print(f'client.py: ahead={ahead}')
 
     # Start Flower client
     fl.client.start_client(server_address="127.0.0.1:18080", client=FlowerClient(region).to_client())
