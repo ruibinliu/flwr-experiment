@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import portalocker
 import torch
 import torch.nn as nn
 from sklearn.model_selection import train_test_split
@@ -35,7 +36,10 @@ def load_datasets(region, use_all=False, ahead=0):
     return_scaler = None
 
     for r in regions:
-        data_df = pd.read_excel(CONFIG['data_path'], sheet_name=r, index_col='Date')
+        with open(CONFIG['data_path'], 'r+b') as f:
+            portalocker.lock(f, portalocker.LOCK_EX)
+            data_df = pd.read_excel(f, sheet_name=r, index_col='Date', engine='openpyxl')
+            portalocker.unlock(f)  # 解锁文件
         data_df = data_df[OMICRON_START_COLS:]  # Ignore data prior to the first reported Omicron case
 
         # Compute moving average
@@ -109,4 +113,5 @@ def load_datasets(region, use_all=False, ahead=0):
     else:
         index = data_df.index
 
+    print(f'Dataset loaded')
     return Dataset(index, X_train, X_test, y_train, y_test, return_scaler, X_train_origin, y_train_origin)

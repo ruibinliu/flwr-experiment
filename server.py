@@ -43,28 +43,8 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     return {"accuracy": sum(accuracies) / sum(examples)}
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Flower Server")
-    parser.add_argument(
-        "-c",
-        "--num_clients",
-        type=int,
-        default=3,
-        required=False,
-        help="Number of clients",
-    )
-    parser.add_argument(
-        "-r",
-        "--num_rounds",
-        type=int,
-        default=5,
-        required=False,
-        help="Number of rounds",
-    )
-    args = parser.parse_args()
-    nclients = args.num_clients
-    nrounds = args.num_rounds
-
+def start_server(nclients, nrounds):
+    print(f'Start server is called. nclients={nclients}, nrounds={nrounds}')
     # Create FedAvg strategy
     strategy = fl.server.strategy.FedAvg(
         fraction_fit=1.0,  # Sample 100% of available clients for training
@@ -88,3 +68,26 @@ if __name__ == "__main__":
     end_time = time.time()
     total_time = round(end_time - start_time, 1)
     print(f'Execution total time is {total_time} seconds.')
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Flower Server")
+    parser.add_argument(
+        "-c",
+        "--num_clients",
+        type=int,
+        default=3,
+        required=False,
+        help="Number of clients",
+    )
+    parser.add_argument(
+        "-r",
+        "--num_rounds",
+        type=int,
+        default=5,
+        required=False,
+        help="Number of rounds",
+    )
+    args = parser.parse_args()
+
+    start_server(args.num_clients, args.num_rounds)

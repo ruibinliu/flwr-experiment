@@ -42,7 +42,7 @@ def get_parameters(model) -> List[np.ndarray]:
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, region):
         self.region = region
-        self.dataset = load_datasets(region, ahead)
+        self.dataset = load_datasets(region, use_all=False, ahead=ahead)
 
         # Initialize model, loss function, and optimizer
         self.model = LSTM(CONFIG['input_len'], CONFIG['hidden_size'],
@@ -139,8 +139,10 @@ class FlowerClient(fl.client.NumPyClient):
         y_pred_train_origin = dataset.scaler.inverse_transform(y_pred_train_origin.detach().numpy().reshape(-1, 1)).flatten()
         y_pred_test = dataset.scaler.inverse_transform(y_pred_test.detach().numpy().reshape(-1, 1)).flatten()
 
-        df_pred = pd.concat([pd.DataFrame(y_pred_train_origin, index=dataset.index[:len(dataset.x_train)]),
-                             pd.DataFrame(y_pred_test, index=dataset.index[len(dataset.x_train):])])
+        y_pred_train_origin = pd.Series(y_pred_train_origin, index=dataset.index[ahead:len(dataset.x_train) + ahead], name=f'{MODEL_NAME}_ahead{ahead + 1}')
+        y_pred_test = pd.Series(y_pred_test, index=dataset.index[len(dataset.x_train) + ahead:], name=f'{MODEL_NAME}_ahead{ahead + 1}')
+        df_pred = pd.concat([pd.DataFrame(y_pred_train_origin),
+                             pd.DataFrame(y_pred_test)])
         df_pred.to_excel(f'{output_folder}/predit_data-{self.region}-{MODEL_NAME}.xlsx')
 
         loss = self.criterion(torch.tensor(y_pred_test), torch.tensor(y_test))
@@ -180,10 +182,10 @@ class FlowerClient(fl.client.NumPyClient):
 
         # Plot results
         plt.figure(figsize=(8, 8), dpi=150)
-        plt.plot(self.dataset.index, np.concatenate((y_train_origin, y_test), axis=0), label='Reported cases', c='black')
-        plt.plot(self.dataset.index[:len(y_pred_train_origin)], y_pred_train_origin, label=f'{MODEL_NAME} (Train)')
-        plt.plot(self.dataset.index[len(y_pred_train_origin):], y_pred_test, label=f'{MODEL_NAME} (Test)')
-        plt.title(f'{MODEL_NAME} prediction for {region}')
+        plt.plot(self.dataset.index[ahead:], np.concatenate((y_train_origin, y_test), axis=0), label='Reported cases', c='black')
+        plt.plot(y_pred_train_origin, label=f'{MODEL_NAME} (Train)')
+        plt.plot(y_pred_test, label=f'{MODEL_NAME} (Test)')
+        plt.title(f'{MODEL_NAME} prediction for {self.region}')
         plt.xlabel('Time')
         plt.ylabel('Number of reported cases')
         plt.legend()
@@ -195,6 +197,29 @@ class FlowerClient(fl.client.NumPyClient):
 
 
 REGIONS = {1: 'Portugal', 2: 'Guangdong', 3: 'Macau'}
+
+
+def start_client(node_id, epochs, ahead_arg):
+    f"""
+    Start federated learning client.
+
+    :param node_id: See ${REGIONS}
+    :param epochs: LSTM epochs
+    :param ahead_arg: How many days ahead is going to be predicted.
+    :return:
+    """
+    global ahead
+    ahead = ahead_arg
+
+    region = REGIONS[node_id]
+    CONFIG['num_epochs'] = epochs
+
+    print(f'Flower client started for region [{region}]. epochs={epochs}, ahead={ahead}.')
+
+    # Start Flower client
+    fl.client.start_client(server_address="127.0.0.1:18080", client=FlowerClient(region).to_client())
+    # fl.client.start_client(server_address="pearl.mlkd.tp.vps.inesc-id.pt:8080", client=FlowerClient().to_client())
+
 
 if __name__ == "__main__":
     N_CLIENTS = 3
@@ -225,12 +250,6 @@ if __name__ == "__main__":
         help="Specify the number of days ahead",
     )
     args = parser.parse_args()
-    region = REGIONS[args.node_id]
     CONFIG['num_epochs'] = args.epoch
-    print(f'Flower client started for region [{region}].')
-    ahead = args.ahead
-    print(f'client.py: ahead={ahead}')
 
-    # Start Flower client
-    fl.client.start_client(server_address="127.0.0.1:18080", client=FlowerClient(region).to_client())
-    # fl.client.start_client(server_address="pearl.mlkd.tp.vps.inesc-id.pt:8080", client=FlowerClient().to_client())
+    start_client(args.node_id, args.epoch, args.ahead)
