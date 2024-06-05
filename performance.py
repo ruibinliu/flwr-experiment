@@ -2,7 +2,7 @@ import os.path
 
 import numpy as np
 import pandas as pd
-from openpyxl import load_workbook, Workbook
+import portalocker
 
 
 def smape(y_true, y_pred):
@@ -19,22 +19,11 @@ def smape(y_true, y_pred):
         return -1
 
 
-def is_sheet_exists(file_path, sheet_name):
-    return sheet_name in pd.read_excel(file_path, sheet_name=None)
-
-
 def save_performance(output_dir, region, rmse, rmse_normalized,
                      mae, mae_normalized,
                      smape, r2, model, index_of_dataset_begin, index_of_dataset_end,
                      index_of_train_begin, index_of_train_end,
-                     index_of_test_begin, index_of_test_end, ahead=0):
-    # Load existing Excel file or create a new one if it doesn't exist
-    output_file = f'{output_dir}/performance.xlsx'
-    if os.path.exists(output_file):
-        df = pd.read_excel(output_file)
-    else:
-        df = pd.DataFrame()
-
+                     index_of_test_begin, index_of_test_end, ahead=0, nround=-1):
     new_row = {
         'Region': region,
         'RMSE': rmse,
@@ -48,33 +37,35 @@ def save_performance(output_dir, region, rmse, rmse_normalized,
         'Train_end': index_of_train_end,
         'Test_start': index_of_test_begin,
         'Test_end': index_of_test_end,
-        'Ahead': ahead + 1
+        'Ahead': ahead + 1,
+        'FL_Round': nround
     }
 
-    df = pd.concat([df, pd.DataFrame(new_row, index=[0])])
-    print(f'save_performance: df={df}')
-    if os.path.exists(output_file):
-        with pd.ExcelWriter(output_file, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, index=False)
-    else:
-        with pd.ExcelWriter(output_file, engine='openpyxl', mode='w') as writer:
+    # Load existing Excel file or create a new one if it doesn't exist
+    output_file = f'{output_dir}/performance.xlsx'
+
+    if not os.path.exists(output_file):
+        with open(output_file, 'wb') as f:
+            portalocker.lock(f, portalocker.LOCK_EX)
+            df = pd.DataFrame(columns=new_row.keys())
+            with pd.ExcelWriter(f, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False)
+            portalocker.unlock(f)  # 解锁文件
+
+    with open(output_file, 'r+b') as f:
+        portalocker.lock(f, portalocker.LOCK_EX)  # 排他锁定文件
+
+        try:
+            df = pd.read_excel(f, engine='openpyxl')
+        except ValueError:
+            df = pd.DataFrame()
+
+        f.seek(0)
+
+        df = pd.concat([df, pd.DataFrame(new_row, index=[0])])
+
+        f.truncate()
+        with pd.ExcelWriter(f, engine='openpyxl') as writer:
             df.to_excel(writer, index=False)
 
-
-    # try:
-    #     wb = load_workbook(file_path)
-    #     ws = wb.active
-    # except FileNotFoundError:
-    #     wb = Workbook()
-    #     ws = wb.active
-    #     ws.append(['Region', 'RMSE', 'RMSE_normalized',
-    #                'MAE', 'MAE_normalized',
-    #                'SMAPE', 'R2', 'Model',
-    #                'Train_start', 'Train_end', 'Test_start', 'Test_end', 'Ahead'])
-    # ws.append([region,
-    #            rmse, rmse_normalized,
-    #            mae, mae_normalized,
-    #            smape, r2, model,
-    #            index_of_train_begin, index_of_train_end,
-    #            index_of_test_begin, index_of_test_end, ahead + 1])
-    # wb.save(file_path)
+        portalocker.unlock(f)  # 解锁文件

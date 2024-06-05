@@ -9,7 +9,7 @@ from config import CONFIG
 
 # Create output folder
 time_str = datetime.now().strftime('%m/%d_%H%M%S')
-output_dir = f'data/output/{time_str}_fl'
+output_dir = f'data/output/{time_str}_figures'
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 

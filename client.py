@@ -28,8 +28,6 @@ ahead = 1
 
 MODEL_NAME = 'F-LSTM'
 
-time_str = datetime.now().strftime('%m/%d_%H%M%S')
-
 
 def set_parameters(model, parameters: List[np.ndarray]):
     params_dict = zip(model.state_dict().keys(), parameters)
@@ -39,14 +37,6 @@ def set_parameters(model, parameters: List[np.ndarray]):
 
 def get_parameters(model) -> List[np.ndarray]:
     return [val.cpu().numpy() for _, val in model.state_dict().items()]
-
-
-def get_output_dir():
-    # Create output folder
-    output_dir = f'data/output/{time_str}_fl_ahead{ahead}'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    return output_dir
 
 
 class FlowerClient(fl.client.NumPyClient):
@@ -66,8 +56,11 @@ class FlowerClient(fl.client.NumPyClient):
         return get_parameters(self.model)
 
     def fit(self, parameters, config):
-        print(f'FlowerClient: fit')
+        print(f'FlowerClient: fit(config={config})')
         start_time = time.time()
+        output_folder = config['output_dir']
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
 
         set_parameters(self.model, parameters)
 
@@ -111,7 +104,7 @@ class FlowerClient(fl.client.NumPyClient):
         # Adjust layout
         # round = len(performance_result[region]) + 1
 
-        plt.savefig(f'{get_output_dir()}/{self.region}-{MODEL_NAME}-loss')
+        plt.savefig(f'{output_folder}/{self.region}-{MODEL_NAME}-loss')
         plt.cla()
         plt.close()
 
@@ -121,6 +114,9 @@ class FlowerClient(fl.client.NumPyClient):
         # round = len(performance_result[region]) + 1
 
         print(f'FlowerClient: evaluate (region={self.region}): config={config}')
+        output_folder = config['output_dir']
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
 
         set_parameters(self.model, parameters)
 
@@ -145,7 +141,7 @@ class FlowerClient(fl.client.NumPyClient):
 
         df_pred = pd.concat([pd.DataFrame(y_pred_train_origin, index=dataset.index[:len(dataset.x_train)]),
                              pd.DataFrame(y_pred_test, index=dataset.index[len(dataset.x_train):])])
-        df_pred.to_excel(f'{get_output_dir()}/predit_data-{self.region}-{MODEL_NAME}.xlsx')
+        df_pred.to_excel(f'{output_folder}/predit_data-{self.region}-{MODEL_NAME}.xlsx')
 
         loss = self.criterion(torch.tensor(y_pred_test), torch.tensor(y_test))
         s_mape = smape(y_test, y_pred_test).astype(float)
@@ -173,14 +169,14 @@ class FlowerClient(fl.client.NumPyClient):
         index_of_test_begin = ''
         index_of_test_end = ''
 
-        save_performance(get_output_dir(), self.region,
+        save_performance(output_folder, self.region,
                          rmse, rmse_normalized,
                          mae, mae_normalized,
                          s_mape, r2, MODEL_NAME,
                          index_of_dataset_begin, index_of_dataset_end,
                          index_of_train_begin, index_of_train_end,
                          index_of_test_begin, index_of_test_end,
-                         ahead)
+                         ahead, config['server_round'])
 
         # Plot results
         plt.figure(figsize=(8, 8), dpi=150)
@@ -191,7 +187,7 @@ class FlowerClient(fl.client.NumPyClient):
         plt.xlabel('Time')
         plt.ylabel('Number of reported cases')
         plt.legend()
-        plt.savefig(f'{get_output_dir()}/{self.region}-{MODEL_NAME}')
+        plt.savefig(f'{output_folder}/{self.region}-{MODEL_NAME}')
         plt.cla()
         plt.close()
 

@@ -1,28 +1,37 @@
 import argparse
-from typing import List, Tuple
+from datetime import datetime
+import os
+import time
+
 import flwr as fl
 from flwr.common import Metrics
 from typing import List, Tuple, Dict
-import time
 
 nrounds = 0
 start_time = 0
+time_str = datetime.now().strftime('%m/%d_%H%M%S')
+
+# Create output folder
+output_dir = f'data/output/{time_str}_fl'
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 
 def configure_fit(server_round: int) -> Dict:
+    print(f'configure_fit, server_round={server_round}')
     """Send round number to client."""
     global start_time
     if server_round == 1:
         print(f":: Starting global execution timer...")
         start_time = time.time()
     print(f":: Starting 'fit' round #{server_round}...")
-    return {"server_round": server_round, "last_round": (server_round == nrounds)}
+    return {"server_round": server_round, "last_round": (server_round == nrounds), "output_dir": output_dir}
 
 
 def configure_evaluate(server_round: int) -> Dict:
     """Send round number to client."""
     print(f":: Starting 'evaluate' round #{server_round}...")
-    return {"server_round": server_round, "last_round": (server_round == nrounds)}
+    return {"server_round": server_round, "last_round": (server_round == nrounds), "output_dir": output_dir}
 
 
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
@@ -35,8 +44,6 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
 
 if __name__ == "__main__":
-
-
     parser = argparse.ArgumentParser(description="Flower Server")
     parser.add_argument(
         "-c",
