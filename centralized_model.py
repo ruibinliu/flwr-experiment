@@ -29,7 +29,7 @@ random.seed(42)
 np.random.seed(42)
 
 
-def lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=0):
+def lstm(region, dataset, ahead=0):
     start_time = time.time()
 
     # Initialize model, loss function, and optimizer
@@ -43,10 +43,10 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=0):
     early_stopping = EarlyStopping(patience=CONFIG['patience'], verbose=False)
     # Training loop
     for epoch in range(CONFIG['num_epochs']):
-        outputs = model(x_train)
+        outputs = model(dataset.x_train)
         optimizer.zero_grad()
         # add unsqueeze(1) to match the expected target shape
-        loss = criterion(outputs, y_train.unsqueeze(1))
+        loss = criterion(outputs, dataset.y_train.unsqueeze(1))
         loss.backward()
         # Apply model changes
         optimizer.step()
@@ -68,20 +68,19 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=0):
     start_time = time.time()
     model.eval()
     with torch.no_grad():
-        y_pred_train = model(x_train)
-        y_pred_test = model(x_test)
+        y_pred_train_origin = model(dataset.X_train_origin)
+        y_pred_test = model(dataset.x_test)
 
     # Denormalize predictions
-    scaler = scaler
-    y_train = scaler.inverse_transform(y_train.detach().numpy().reshape(-1, 1)).flatten()
-    y_test = scaler.inverse_transform(y_test.unsqueeze(1).numpy().reshape(-1, 1)).flatten()
-    y_pred_train = scaler.inverse_transform(y_pred_train.detach().numpy().reshape(-1, 1)).flatten()
-    y_pred_test = scaler.inverse_transform(y_pred_test.detach().numpy().reshape(-1, 1)).flatten()
+    y_train_origin = dataset.scaler.inverse_transform(dataset.y_train_origin.detach().numpy().reshape(-1, 1)).flatten()
+    y_train = dataset.scaler.inverse_transform(dataset.y_train.detach().numpy().reshape(-1, 1)).flatten()
+    y_test = dataset.scaler.inverse_transform(dataset.y_test.unsqueeze(1).numpy().reshape(-1, 1)).flatten()
+    y_pred_train_origin = dataset.scaler.inverse_transform(y_pred_train_origin.detach().numpy().reshape(-1, 1)).flatten()
+    y_pred_test = dataset.scaler.inverse_transform(y_pred_test.detach().numpy().reshape(-1, 1)).flatten()
 
-    y_pred_train = pd.Series(y_pred_train, index=index[ahead:len(x_train) + ahead])
-    y_pred_test = pd.Series(y_pred_test, index=index[len(x_train) + ahead:])
-    df_pred = pd.concat([pd.DataFrame(y_pred_train), pd.DataFrame(y_pred_test)])
-    df_pred.to_excel(f'{output_dir}/predit_data-{region}-{MODEL_NAME}.xlsx')
+    y_pred_train_origin = pd.Series(y_pred_train_origin, index=dataset.index[ahead:len(dataset.x_train) + ahead], name=f'{MODEL_NAME}_ahead{ahead + 1}')
+    y_pred_test = pd.Series(y_pred_test, index=dataset.index[len(dataset.x_train) + ahead:], name=f'{MODEL_NAME}_ahead{ahead + 1}')
+    df_pred = pd.concat([pd.DataFrame(y_pred_train_origin), pd.DataFrame(y_pred_test)])
 
     loss = criterion(torch.tensor(y_pred_test.to_numpy()), torch.tensor(y_test))
     rmse = sqrt(mean_squared_error(y_test, y_pred_test))
@@ -113,11 +112,11 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=0):
     # Plot results
     fig, axs = plt.subplots(2, 1, figsize=(8, 8))
 
-    axs[0].plot(index[ahead:], np.concatenate((y_train, y_test), axis=0), label='Reported cases', c='black')
+    axs[0].plot(dataset.index[ahead:], np.concatenate((y_train_origin, y_test), axis=0), label='Reported cases', c='black')
     # plt.plot(data_df.index, torch.cat((y_train, y_test), dim=0).numpy(), label='Data')
-    axs[0].plot(y_pred_train, label=f'{MODEL_NAME} predicted (Train)')
-    axs[0].plot(y_pred_test, label=f'{MODEL_NAME} predicted (Test)')
-    axs[0].set_title(f'{MODEL_NAME} Prediction')
+    axs[0].plot(y_pred_train_origin, label=f'{MODEL_NAME} (Train)')
+    axs[0].plot(y_pred_test, label=f'{MODEL_NAME} (Test)')
+    axs[0].set_title(f'{MODEL_NAME} prediction for {region}')
     axs[0].set_xlabel('Time')
     axs[0].set_ylabel('Number of reported cases')
     axs[0].legend()
@@ -130,18 +129,27 @@ def lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=0):
 
     # Adjust layout
     plt.tight_layout()
-    plt.savefig(f'{output_dir}/{region}-lstm.png')
+    plt.savefig(f'{output_dir}/{region}-{MODEL_NAME}.png')
     plt.cla()
     plt.close()
 
-    return model
+    return df_pred
 
 
 if __name__ == '__main__':
     for region in CONFIG['regions']:
+        results = []
         for ahead in range(0, CONFIG['output_len']):
             t0 = time.time()
-            index, x_train, x_test, y_train, y_test, scaler = load_datasets(region, use_all=True, ahead=ahead)
-            lstm_model = lstm(region, index, x_train, x_test, y_train, y_test, scaler, ahead=ahead)
+            dataset = load_datasets(region, use_all=True, ahead=ahead)
+            df = lstm(region, dataset, ahead=ahead)
+            results.append(df)
             t1 = time.time()
-            print(f'C-LSTM({region}) cost {round(t1 - t0, 3)} seconds.')
+            print(f'{MODEL_NAME}({region}) cost {round(t1 - t0, 3)} seconds.')
+
+        # 合并 DataFrame
+        df = pd.concat(results, axis=1)
+        output_file = f'{output_dir}/predit_data-{MODEL_NAME}.xlsx'
+        mode = 'a' if os.path.exists(output_file) else 'w'
+        with pd.ExcelWriter(output_file, engine='openpyxl', mode=mode) as writer:  # 使用writer避免覆盖已有的sheet
+            df.to_excel(writer, sheet_name=region)

@@ -7,6 +7,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.utils import shuffle
 
 from config import CONFIG
+from dataset import Dataset
 
 input_cols = CONFIG['input_cols']
 input_cols_all = [c + '_' + r for c in input_cols for r in CONFIG['regions']]
@@ -92,6 +93,7 @@ def load_datasets(region, use_all=False, ahead=0):
             y_train.extend(y)
 
     # Shuffle the training data
+    X_train_origin, y_train_origin = X_train, y_train  # Remember the origin data for drawing plots later
     X_train, y_train = shuffle(X_train, y_train, random_state=42)
 
     # Convert to PyTorch tensors. add unsqueeze(1) to match the expected input shape
@@ -99,10 +101,12 @@ def load_datasets(region, use_all=False, ahead=0):
     y_train = torch.tensor(y_train, dtype=torch.float32)
     X_test = torch.tensor(X_test, dtype=torch.float32).unsqueeze(1)
     y_test = torch.tensor(y_test, dtype=torch.float32)
+    X_train_origin = torch.tensor(X_train_origin, dtype=torch.float32).unsqueeze(1)
+    y_train_origin = torch.tensor(y_train_origin, dtype=torch.float32)
 
     if use_all:
         index = [i for i in range(len(y_train) + len(y_test) + ahead)]
     else:
         index = data_df.index
 
-    return index, X_train, X_test, y_train, y_test, return_scaler
+    return Dataset(index, X_train, X_test, y_train, y_test, return_scaler, X_train_origin, y_train_origin)

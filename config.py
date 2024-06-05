@@ -1,6 +1,5 @@
 CONFIG = {
     # Load data
-    # 'data_path': 'data/input/c19_data_for_FL.xlsx',
     'data_path': 'data/input/covid19_data.xlsx',
     'moving_average': 7,  # Smooth the original data
     'input_cols': ['NewCases'],
@@ -9,7 +8,7 @@ CONFIG = {
     'output_len': 7,  # Predict the next 7 days
 
     # LSTM Hyper Parameters
-    'num_epochs': 1,
+    'num_epochs': 1000,
     'hidden_size': 64,
     'num_layers': 2,
     'dropout': 0,

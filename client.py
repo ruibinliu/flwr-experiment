@@ -26,9 +26,7 @@ if torch.cuda.is_available():
 
 ahead = 1
 
-MODEL_LSTM = 'LSTM'
-MODEL_A_LSTM = 'A_LSTM'
-MODEL_FL_LSTM = 'FL_LSTM'
+MODEL_NAME = 'F-LSTM'
 
 time_str = datetime.now().strftime('%m/%d_%H%M%S')
 
@@ -54,10 +52,12 @@ def get_output_dir():
 class FlowerClient(fl.client.NumPyClient):
     def __init__(self, region):
         self.region = region
-        self.index, self.x_train, self.x_test, self.y_train, self.y_test, self.scaler = load_datasets(region, ahead)
+        self.dataset = load_datasets(region, ahead)
 
         # Initialize model, loss function, and optimizer
-        self.model = LSTM(CONFIG['input_len'], CONFIG['hidden_size'], CONFIG['num_layers'], len(CONFIG['output_col']), dropout=CONFIG['dropout'])
+        self.model = LSTM(CONFIG['input_len'], CONFIG['hidden_size'],
+                          CONFIG['num_layers'], len(CONFIG['output_col']),
+                          dropout=CONFIG['dropout'])
         self.criterion = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=CONFIG['learning_rate'])
 
@@ -77,10 +77,10 @@ class FlowerClient(fl.client.NumPyClient):
         early_stopping = EarlyStopping(patience=CONFIG['patience'], verbose=False, path=f'checkpoint_{self.region}.pt')
         # Training loop
         for epoch in range(CONFIG['num_epochs']):
-            outputs = self.model(self.x_train)
+            outputs = self.model(self.dataset.x_train)
             self.optimizer.zero_grad()
             # add unsqueeze(1) to match the expected target shape
-            loss = self.criterion(outputs, self.y_train.unsqueeze(1))
+            loss = self.criterion(outputs, self.dataset.y_train.unsqueeze(1))
             loss.backward()
             # Apply model changes
             self.optimizer.step()
@@ -111,11 +111,11 @@ class FlowerClient(fl.client.NumPyClient):
         # Adjust layout
         # round = len(performance_result[region]) + 1
 
-        plt.savefig(f'{get_output_dir()}/{self.region}-{MODEL_FL_LSTM}-loss')
+        plt.savefig(f'{get_output_dir()}/{self.region}-{MODEL_NAME}-loss')
         plt.cla()
         plt.close()
 
-        return get_parameters(self.model), len(self.x_train), {}
+        return get_parameters(self.model), len(self.dataset.x_train), {}
 
     def evaluate(self, parameters, config):
         # round = len(performance_result[region]) + 1
@@ -128,22 +128,24 @@ class FlowerClient(fl.client.NumPyClient):
         # print(f"Final test set performance:\n\tloss {loss}\n\taccuracy {accuracy}")
 
         # loss, accuracy = test(self.model, self.valloader)
+        dataset = self.dataset
 
         # Evaluation
         self.model.eval()
         with torch.no_grad():
-            y_pred_train = self.model(self.x_train)
-            y_pred_test = self.model(self.x_test)
+            y_pred_train_origin = self.model(dataset.X_train_origin)
+            y_pred_test = self.model(dataset.x_test)
 
         # De-normalize predictions
-        y_train = self.scaler.inverse_transform(self.y_train.detach().numpy().reshape(-1, 1)).flatten()
-        y_test = self.scaler.inverse_transform(self.y_test.unsqueeze(1).numpy().reshape(-1, 1)).flatten()
-        y_pred_train = self.scaler.inverse_transform(y_pred_train.detach().numpy().reshape(-1, 1)).flatten()
-        y_pred_test = self.scaler.inverse_transform(y_pred_test.detach().numpy().reshape(-1, 1)).flatten()
+        y_train = dataset.scaler.inverse_transform(dataset.y_train.detach().numpy().reshape(-1, 1)).flatten()
+        y_train_origin = dataset.scaler.inverse_transform(dataset.y_train_origin.detach().numpy().reshape(-1, 1)).flatten()
+        y_test = dataset.scaler.inverse_transform(dataset.y_test.unsqueeze(1).numpy().reshape(-1, 1)).flatten()
+        y_pred_train_origin = dataset.scaler.inverse_transform(y_pred_train_origin.detach().numpy().reshape(-1, 1)).flatten()
+        y_pred_test = dataset.scaler.inverse_transform(y_pred_test.detach().numpy().reshape(-1, 1)).flatten()
 
-        df_pred = pd.concat([pd.DataFrame(y_pred_train, index=self.index[:len(self.x_train)]),
-                             pd.DataFrame(y_pred_test, index=self.index[len(self.x_train):])])
-        df_pred.to_excel(f'{get_output_dir()}/predit_data-{self.region}-{MODEL_FL_LSTM}.xlsx')
+        df_pred = pd.concat([pd.DataFrame(y_pred_train_origin, index=dataset.index[:len(dataset.x_train)]),
+                             pd.DataFrame(y_pred_test, index=dataset.index[len(dataset.x_train):])])
+        df_pred.to_excel(f'{get_output_dir()}/predit_data-{self.region}-{MODEL_NAME}.xlsx')
 
         loss = self.criterion(torch.tensor(y_pred_test), torch.tensor(y_test))
         s_mape = smape(y_test, y_pred_test).astype(float)
@@ -174,7 +176,7 @@ class FlowerClient(fl.client.NumPyClient):
         save_performance(get_output_dir(), self.region,
                          rmse, rmse_normalized,
                          mae, mae_normalized,
-                         s_mape, r2, MODEL_FL_LSTM,
+                         s_mape, r2, MODEL_NAME,
                          index_of_dataset_begin, index_of_dataset_end,
                          index_of_train_begin, index_of_train_end,
                          index_of_test_begin, index_of_test_end,
@@ -182,18 +184,18 @@ class FlowerClient(fl.client.NumPyClient):
 
         # Plot results
         plt.figure(figsize=(8, 8), dpi=150)
-        plt.plot(self.index, np.concatenate((y_train, y_test), axis=0), label='Reported cases', c='black')
-        plt.plot(self.index[:len(y_pred_train)], y_pred_train, label='FL-LSTM prediction (Train)')
-        plt.plot(self.index[len(y_pred_train):], y_pred_test, label='FL-LSTM prediction (Test)')
-        plt.title('FL-LSTM Prediction')
+        plt.plot(self.dataset.index, np.concatenate((y_train_origin, y_test), axis=0), label='Reported cases', c='black')
+        plt.plot(self.dataset.index[:len(y_pred_train_origin)], y_pred_train_origin, label=f'{MODEL_NAME} (Train)')
+        plt.plot(self.dataset.index[len(y_pred_train_origin):], y_pred_test, label=f'{MODEL_NAME} (Test)')
+        plt.title(f'{MODEL_NAME} prediction for {region}')
         plt.xlabel('Time')
         plt.ylabel('Number of reported cases')
         plt.legend()
-        plt.savefig(f'{get_output_dir()}/{self.region}-{MODEL_FL_LSTM}')
+        plt.savefig(f'{get_output_dir()}/{self.region}-{MODEL_NAME}')
         plt.cla()
         plt.close()
 
-        return float(loss), len(self.x_test), {"rmse": rmse, 'mae': mae, 'smape': s_mape}
+        return float(loss), len(self.dataset.x_test), {"rmse": rmse, 'mae': mae, 'smape': s_mape}
 
 
 REGIONS = {1: 'Portugal', 2: 'Guangdong', 3: 'Macau'}
@@ -222,7 +224,7 @@ if __name__ == "__main__":
         "-a",
         "--ahead",
         type=int,
-        choices=range(1, 7),
+        choices=range(0, 7),
         required=True,
         help="Specify the number of days ahead",
     )
