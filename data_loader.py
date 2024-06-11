@@ -2,8 +2,6 @@ import numpy as np
 import pandas as pd
 import portalocker
 import torch
-import torch.nn as nn
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.utils import shuffle
 
@@ -34,6 +32,8 @@ def load_datasets(region, use_all=False, ahead=0):
     X_test = []
     y_test = []
     return_scaler = None
+
+    date_index = []
 
     for r in regions:
         with open(CONFIG['data_path'], 'r+b') as f:
@@ -76,6 +76,9 @@ def load_datasets(region, use_all=False, ahead=0):
         y = target[input_len + ahead:]
         data_df = data_df[input_len:]
 
+        for i in range(ahead, len(data_df.index.values)):
+            date_index.append(data_df.index.values[i])
+
         print(f'load_datasets: data.shape={X.shape}')
         print(f'load_datasets: target.shape={y.shape}')
 
@@ -109,9 +112,10 @@ def load_datasets(region, use_all=False, ahead=0):
     y_train_origin = torch.tensor(y_train_origin, dtype=torch.float32)
 
     if use_all:
+        print(f'date_index={date_index}')
         index = [i for i in range(len(y_train) + len(y_test) + ahead)]
     else:
         index = data_df.index
 
     print(f'Dataset loaded')
-    return Dataset(index, X_train, X_test, y_train, y_test, return_scaler, X_train_origin, y_train_origin)
+    return Dataset(index, X_train, X_test, y_train, y_test, return_scaler, X_train_origin, y_train_origin, date_index)

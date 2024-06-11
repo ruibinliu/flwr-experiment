@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from config import CONFIG
+from data_loader import load_datasets
 
 # Create output folder
 time_str = datetime.now().strftime('%m/%d_%H%M%S')
@@ -13,130 +14,142 @@ output_dir = f'data/output/{time_str}_figures'
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-# df_mo = pd.read_excel(f'data/output/04/26_155817_local/performance_Macau.xlsx', sheet_name='Macau')
-# df_pt = pd.read_excel(f'data/output/04/26_155817_local/performance_Macau.xlsx', sheet_name='Portugal')
-# df_gd = pd.read_excel(f'data/output/04/26_155817_local/performance_Macau.xlsx', sheet_name='Guangdong')
-# scaler 0, 1, epoch=1
-df_pt = pd.read_excel(f'data/output/05/09_110222_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-df_gd = pd.read_excel(f'data/output/05/09_110222_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-df_mo = pd.read_excel(f'data/output/05/09_110222_fl/performance_Macau.xlsx', sheet_name='Sheet')
-# scaler 0, 1, epoch=2
-# df_pt = pd.read_excel(f'data/output/05/09_111638_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-# df_gd = pd.read_excel(f'data/output/05/09_111638_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-# df_mo = pd.read_excel(f'data/output/05/09_111638_fl/performance_Macau.xlsx', sheet_name='Sheet')
-# scaler 0, 1, epoch=3
-# df_pt = pd.read_excel(f'data/output/05/09_112617_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-# df_gd = pd.read_excel(f'data/output/05/09_112617_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-# df_mo = pd.read_excel(f'data/output/05/09_112717_fl/performance_Macau.xlsx', sheet_name='Sheet')
-# scaler 0, 1, epoch=4
-# df_pt = pd.read_excel(f'data/output/05/09_113207_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-# df_gd = pd.read_excel(f'data/output/05/09_113207_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-# df_mo = pd.read_excel(f'data/output/05/09_113207_fl/performance_Macau.xlsx', sheet_name='Sheet')
-# scaler 0, 1, epoch=5
-# df_pt = pd.read_excel(f'data/output/05/09_115914_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-# df_gd = pd.read_excel(f'data/output/05/09_115914_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-# df_mo = pd.read_excel(f'data/output/05/09_115914_fl/performance_Macau.xlsx', sheet_name='Sheet')
-# scaler 0, 1000
-# df_mo = pd.read_excel(f'data/output/05/09_151256_fl/performance_Portugal.xlsx', sheet_name='Sheet')
-# df_pt = pd.read_excel(f'data/output/05/09_151301_fl/performance_Guangdong.xlsx', sheet_name='Sheet')
-# df_gd = pd.read_excel(f'data/output/05/09_151306_fl/performance_Macau.xlsx', sheet_name='Sheet')
-# L-LSTM, C-LSTM, F-LSTM
-# df_mo = pd.read_excel(f'data/output/05/09_153651_local/performance_Macau.xlsx', sheet_name='Macau')
-# df_pt = pd.read_excel(f'data/output/05/09_153651_local/performance_Macau.xlsx', sheet_name='Portugal')
-# df_gd = pd.read_excel(f'data/output/05/09_153651_local/performance_Macau.xlsx', sheet_name='Guangdong')
+colors = [
+    ['#EDF4F5', '#C5E3E2', '#9EC6DB'],
+    ['#DFE1E2', '#B7DBE3', '#F5E09B'],
+    ['#F4DEBB', '#E1B6B5', '#F9F2C1'],
+    ['#9EE092', '#F8D793', '#D2D2D2'],
+    ['#F9F5F6', '#DDDEDE', '#D882AD']
+]
+
+DPI = 150
+
+def draw_prediction():
+    regions = CONFIG['regions']
+    for region in regions:
+        df_llstm = pd.read_excel(f'data/output/06/05_225330_local/predit_data-LSTM.xlsx', index_col='Date', sheet_name=region)
+        # df_clstm = pd.read_excel(f'data/output/06/06_133621_centralized/predict_data-C-LSTM.xlsx', sheet_name=region)
+        df_flstm_a1 = pd.read_excel(f'data/output/06/05_233734_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a2 = pd.read_excel(f'data/output/06/05_233432_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a3 = pd.read_excel(f'data/output/06/05_233954_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a4 = pd.read_excel(f'data/output/06/05_234212_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a5 = pd.read_excel(f'data/output/06/05_234406_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a6 = pd.read_excel(f'data/output/06/05_234545_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a7 = pd.read_excel(f'data/output/06/05_234739_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+
+        df = pd.concat([df_llstm,# df_clstm,
+                        df_flstm_a1, df_flstm_a2, df_flstm_a3, df_flstm_a4, df_flstm_a5, df_flstm_a6, df_flstm_a7], ignore_index=True)
+
+        # Plot results
+        fig, axs = plt.subplots(1, 2, figsize=(12, 6), dpi=DPI)
+
+        dataset = load_datasets(region, ahead=0)
+        y_train_origin = dataset.scaler.inverse_transform(
+            dataset.y_train_origin.detach().numpy().reshape(-1, 1)).flatten()
+        y_test = dataset.scaler.inverse_transform(dataset.y_test.unsqueeze(1).numpy().reshape(-1, 1)).flatten()
+        y = pd.Series(np.concatenate((y_train_origin, y_test), axis=0), index=dataset.index)
+        axs[0].plot(y, label='Reported cases', c='black')
+        for i in range(1, 8):
+            axs[0].plot(df_llstm[f'LSTM_ahead{i}'], label=f'L-LSTM ({i} days ahead)')
+            # axs[0].plot(y_pred_test, label=f'{MODEL_NAME} (Test)')
+            # axs[0].set_title(f'{MODEL_NAME} prediction for {region}')
+        axs[0].set_xlabel('Time')
+        axs[0].set_ylabel('Number of reported cases')
+        axs[0].legend()
+
+        axs[1].plot(y, label='Reported cases', c='black')
+        axs[1].plot(df_flstm_a1[f'F-LSTM_ahead1'], label='F-LSTM (1 days ahead)')
+        axs[1].plot(df_flstm_a2[f'F-LSTM_ahead2'], label='F-LSTM (2 days ahead)')
+        axs[1].plot(df_flstm_a3[f'F-LSTM_ahead3'], label='F-LSTM (3 days ahead)')
+        axs[1].plot(df_flstm_a4[f'F-LSTM_ahead4'], label='F-LSTM (4 days ahead)')
+        axs[1].plot(df_flstm_a5[f'F-LSTM_ahead5'], label='F-LSTM (5 days ahead)')
+        axs[1].plot(df_flstm_a6[f'F-LSTM_ahead6'], label='F-LSTM (6 days ahead)')
+        axs[1].plot(df_flstm_a7[f'F-LSTM_ahead7'], label='F-LSTM (7 days ahead)')
+        axs[1].set_xlabel('Time')
+        axs[1].set_ylabel('Number of reported cases')
+        axs[1].legend()
+
+        # Adjust layout
+        plt.tight_layout()
+        plt.savefig(f'{output_dir}/figure1-prediction_{region}.png')
+        plt.cla()
+        plt.close()
 
 
 def draw_performance():
-    plt.figure(num=None, figsize=(12, 12))
-    indices = ['RMSE', 'MAE', 'SMAPE', 'R2']
-    for i in range(len(indices)):
-        plt.subplot(2, 2, i + 1)
-        indice = indices[i]
-        regions = ['Guangdong', 'Macau', 'Portugal']
-        x = np.arange(len(regions))
-        width = 0.2
-        x_llstm = x
-        x_clstm = x + width
-        x_flstm = x + 2 * width
+    df_llstm = pd.read_excel(f'data/output/06/05_225330_local/performance.xlsx')
+    df_clstm = pd.read_excel(f'data/output/06/06_133621_centralized/performance.xlsx')
+    # Only use the last round performance
+    df_flstm_a1 = pd.read_excel(f'data/output/06/05_233734_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a2 = pd.read_excel(f'data/output/06/05_233432_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a3 = pd.read_excel(f'data/output/06/05_233954_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a4 = pd.read_excel(f'data/output/06/05_234212_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a5 = pd.read_excel(f'data/output/06/05_234406_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a6 = pd.read_excel(f'data/output/06/05_234545_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a7 = pd.read_excel(f'data/output/06/05_234739_fl/performance.xlsx').iloc[[-1]]
 
-        llstm = [df_gd.loc[df_gd['Model'] == 'L-LSTM'][indice].iloc[0],
-                 df_mo.loc[df_mo['Model'] == 'L-LSTM'][indice].iloc[0],
-                 df_pt.loc[df_pt['Model'] == 'L-LSTM'][indice].iloc[0]]
-        clstm = [df_gd.loc[df_gd['Model'] == 'C-LSTM'][indice].iloc[0],
-                 df_mo.loc[df_mo['Model'] == 'C-LSTM'][indice].iloc[0],
-                 df_pt.loc[df_pt['Model'] == 'C-LSTM'][indice].iloc[0]]
-        flstm = []
+    df = pd.concat([df_llstm, df_clstm, df_flstm_a1, df_flstm_a2, df_flstm_a3, df_flstm_a4, df_flstm_a5,
+                    df_flstm_a6, df_flstm_a7], ignore_index=True)
+    print(df)
 
-        best_round_index = []
-        for df in [df_gd, df_mo, df_pt]:
-            best_index = 0
-            best = df.loc[df['Model'].str.contains('FL_LSTM')][indice].iloc[0]
-            mask1 = len(df.loc[df['Model'].str.contains('FL_LSTM')][indice])
-            mask2 = df.loc[df['Model'].str.contains('FL_LSTM')][indice]
-            for i in range(len(df.loc[df['Model'].str.contains('FL_LSTM')][indice])):
-                if indice == 'R2':
-                    # The larger, the better
-                    mask = df.loc[df['Model'].str.contains('FL_LSTM')][indice].iloc[i]
-                    if df.loc[df['Model'].str.contains('FL_LSTM')][indice].iloc[i] > best:
-                        best_index = i
-                        best = df.loc[df['Model'].str.contains('FL_LSTM')][indice].iloc[i]
-                else:
-                    # The smaller, the better
-                    mask = df.loc[df['Model'].str.contains('FL_LSTM')][indice].iloc[i]
-                    if df.loc[df['Model'].str.contains('FL_LSTM')][indice].iloc[i] < best:
-                        best_index = i
-                        best = df.loc[df['Model'].str.contains('FL_LSTM')][indice].iloc[i]
+    df = df.rename(columns={'RMSE_normalized': 'nRMSE', 'MAE_normalized': 'nMAE'})
 
-            flstm.append(best)
-            best_round_index.append(best_index)
+    # Min-Max normalization for SMAPE
+    min_value = df['SMAPE'].min()
+    max_value = df['SMAPE'].max()
+    df['nSMAPE'] = (df['SMAPE'] - min_value) / (max_value - min_value)
 
-        plt.bar(x_llstm, llstm, width=width, label='L-LSTM')
-        plt.bar(x_clstm, clstm, width=width, label='C-LSTM')
-        plt.bar(x_flstm, flstm, width=width, label='F-LSTM')
-        # Replace x axis labels
-        plt.xticks(x + width, labels=regions)
+    df = df.groupby(['Ahead', 'Model']).agg({
+        'nRMSE': 'mean', 'nMAE': 'mean', 'nSMAPE': 'mean', 'R2': 'mean'
+    }).reset_index()
+    print(df)
 
-        ylabel = 'R square' if indice == 'R2' else indice
-        title = ylabel + '\n' + f'FL-LSTM: Best {ylabel} of [GD, MO, PT] is round {best_round_index}.'
+    df = df.groupby('Ahead')
+    print(df)
 
-        plt.title(title)
-        plt.xlabel('Region')
-        plt.ylabel(ylabel)
-        plt.grid()
-        plt.legend()
-    plt.tight_layout()
-    plt.savefig(f'{output_dir}/performance.png')
-    plt.cla()
-    plt.close()
+    # 为每个 'Category1' 绘制单独的 bar 图
+    for key, group in df:
+        print(f'key={key}, group={group}')
+        group = group.sort_values(by='Model', ascending=False)
+
+        for i in range(len(colors)):
+            plt.figure(num=None, figsize=(8, 8), dpi=DPI)
+            group.plot(kind='bar', x='Model', y=['nRMSE', 'nMAE', 'nSMAPE'], color=colors[i],
+                       edgecolor='white', width=0.9)
+            # plt.xlabel('Model')
+            # plt.ylabel('Values')
+            # plt.title(f'key = {key}')
+            plt.legend(loc='best')
+            # plt.show()
+            plt.xticks(rotation=0)
+            plt.gca().spines['right'].set_visible(False)
+            plt.gca().spines['top'].set_visible(False)
+            plt.savefig(f'{output_dir}/figure2-ahead{key}_color{i}.png')
+            plt.cla()
+            plt.close()
 
 
 def draw_rounds():
-    plt.figure(num=None, figsize=(12, 12))
-    indices = ['RMSE', 'MAE', 'SMAPE', 'R2']
-    for i in range(len(indices)):
-        plt.subplot(2, 2, i + 1)
-        indice = indices[i]
+    regions = CONFIG['regions']
+    df_flstm_a1 = pd.read_excel(f'data/output/06/11_162802_fl/performance.xlsx')
+    df = df_flstm_a1.rename(columns={'RMSE_normalized': 'nRMSE', 'MAE_normalized': 'nMAE'})
 
-        plt.plot(df_gd.loc[df_gd['Model'].str.contains('FL_LSTM')][indice], label='Guangdong')
-        plt.plot(df_mo.loc[df_mo['Model'].str.contains('FL_LSTM')][indice], label='Macau')
-        plt.plot(df_pt.loc[df_pt['Model'].str.contains('FL_LSTM')][indice], label='Portugal')
-
-        plt.title('R^2' if indice == 'R2' else indice)
+    for region in regions:
+        data = df[df['Region'] == region]
+        plt.figure(num=None, figsize=(6, 6))
+        plt.plot([x for x in range(1, len(data['nMAE']) + 1)], data['nMAE'], label='nMAE')
         plt.xlabel('Rounds')
-        plt.ylabel('R^2' if indice == 'R2' else indice)
-        plt.grid()
+        plt.ylabel('nMAE')
         plt.legend()
-    plt.suptitle(f'Federated learning LSTM (epoch=1)')
-    plt.tight_layout()
-    plt.savefig(f'{output_dir}/performance-rounds.png')
-    plt.cla()
-    plt.close()
-
-    with open(f'{output_dir}/config.txt', 'w') as file:
-        for key, value in CONFIG.items():
-            file.write(f'{key}={value}\n')
+        plt.tight_layout()
+        plt.gca().spines['right'].set_visible(False)
+        plt.gca().spines['top'].set_visible(False)
+        plt.savefig(f'{output_dir}/figure3_{region}.png')
+        plt.cla()
+        plt.close()
 
 
 if __name__ == '__main__':
+    # draw_prediction()
     # draw_performance()
     draw_rounds()
