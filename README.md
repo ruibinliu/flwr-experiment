@@ -15,5 +15,12 @@ python server.py -r 5
 
 # Start client
 ```
-python .\client.py -n 1
+python .\client.py -n 1 -e 1 -a 0
 ```
+
+
+# Start L-LSTM
+python local.py
+
+# Start C-LSTM
+python centralized_model.py
