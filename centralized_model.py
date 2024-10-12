@@ -78,6 +78,8 @@ def lstm(region, dataset, ahead=0):
     y_pred_train_origin = dataset.scaler.inverse_transform(y_pred_train_origin.detach().numpy().reshape(-1, 1)).flatten()
     y_pred_test = dataset.scaler.inverse_transform(y_pred_test.detach().numpy().reshape(-1, 1)).flatten()
 
+    local_y_train = dataset.scaler.inverse_transform(dataset.local_y_train.detach().numpy().reshape(-1, 1)).flatten()
+
     y_pred_train_origin = pd.Series(y_pred_train_origin, index=dataset.index[ahead:len(dataset.x_train) + ahead], name=f'{MODEL_NAME}_ahead{ahead + 1}')
     y_pred_test = pd.Series(y_pred_test, index=dataset.index[len(dataset.x_train) + ahead:], name=f'{MODEL_NAME}_ahead{ahead + 1}')
     df_pred = pd.concat([pd.DataFrame(y_pred_train_origin), pd.DataFrame(y_pred_test)])
@@ -85,12 +87,12 @@ def lstm(region, dataset, ahead=0):
 
     loss = criterion(torch.tensor(y_pred_test.to_numpy()), torch.tensor(y_test))
     rmse = sqrt(mean_squared_error(y_test, y_pred_test))
-    rmse_normalized = rmse / max(max(y_train), max(y_test))
+    rmse_normalized = rmse / max(max(local_y_train), max(y_test))
     mae = mean_absolute_error(y_test, y_pred_test)
-    mae_normalized = mae / max(max(y_train), max(y_test))
+    mae_normalized = mae / max(max(local_y_train), max(y_test))
     s_mape = smape(y_test, y_pred_test)
     r2 = r2_score(y_test, y_pred_test)
-    print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape}:.2f')
+    # print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape}:.2f')
 
     end_time = time.time()
     print(f'{MODEL_NAME} testing time: {round(end_time - start_time, 3)} seconds.')

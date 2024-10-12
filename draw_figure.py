@@ -29,25 +29,28 @@ def draw_prediction():
     for region in regions:
         df_llstm = pd.read_excel(f'data/output/06/05_225330_local/predit_data-LSTM.xlsx', index_col='Date', sheet_name=region)
         # df_clstm = pd.read_excel(f'data/output/06/06_133621_centralized/predict_data-C-LSTM.xlsx', sheet_name=region)
-        df_flstm_a1 = pd.read_excel(f'data/output/06/05_233734_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
-        df_flstm_a2 = pd.read_excel(f'data/output/06/05_233432_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
-        df_flstm_a3 = pd.read_excel(f'data/output/06/05_233954_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
-        df_flstm_a4 = pd.read_excel(f'data/output/06/05_234212_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
-        df_flstm_a5 = pd.read_excel(f'data/output/06/05_234406_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
-        df_flstm_a6 = pd.read_excel(f'data/output/06/05_234545_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
-        df_flstm_a7 = pd.read_excel(f'data/output/06/05_234739_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a1 = pd.read_excel(f'data/output/07/02_161544_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a2 = pd.read_excel(f'data/output/07/02_161732_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a3 = pd.read_excel(f'data/output/07/02_162123_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a4 = pd.read_excel(f'data/output/07/02_162305_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a5 = pd.read_excel(f'data/output/07/02_162447_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a6 = pd.read_excel(f'data/output/07/02_162447_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
+        df_flstm_a7 = pd.read_excel(f'data/output/07/02_162636_fl/predit_data-{region}-F-LSTM.xlsx', index_col='Date')
 
         df = pd.concat([df_llstm,# df_clstm,
                         df_flstm_a1, df_flstm_a2, df_flstm_a3, df_flstm_a4, df_flstm_a5, df_flstm_a6, df_flstm_a7], ignore_index=True)
 
         # Plot results
-        fig, axs = plt.subplots(1, 2, figsize=(12, 6), dpi=DPI)
+        fig, axs = plt.subplots(1, 2, figsize=(24, 6), dpi=DPI)
 
         dataset = load_datasets(region, ahead=0)
         y_train_origin = dataset.scaler.inverse_transform(
             dataset.y_train_origin.detach().numpy().reshape(-1, 1)).flatten()
         y_test = dataset.scaler.inverse_transform(dataset.y_test.unsqueeze(1).numpy().reshape(-1, 1)).flatten()
         y = pd.Series(np.concatenate((y_train_origin, y_test), axis=0), index=dataset.index)
+
+        colormap = plt.get_cmap('cool')
+
         axs[0].plot(y, label='Reported cases', c='black')
         for i in range(1, 8):
             axs[0].plot(df_llstm[f'LSTM_ahead{i}'], label=f'L-LSTM ({i} days ahead)')
@@ -78,15 +81,15 @@ def draw_prediction():
 
 def draw_performance():
     df_llstm = pd.read_excel(f'data/output/06/05_225330_local/performance.xlsx')
-    df_clstm = pd.read_excel(f'data/output/06/06_133621_centralized/performance.xlsx')
+    df_clstm = pd.read_excel(f'data/output/07/02_165413_centralized/performance.xlsx')
     # Only use the last round performance
-    df_flstm_a1 = pd.read_excel(f'data/output/06/05_233734_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a2 = pd.read_excel(f'data/output/06/05_233432_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a3 = pd.read_excel(f'data/output/06/05_233954_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a4 = pd.read_excel(f'data/output/06/05_234212_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a5 = pd.read_excel(f'data/output/06/05_234406_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a6 = pd.read_excel(f'data/output/06/05_234545_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a7 = pd.read_excel(f'data/output/06/05_234739_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a1 = pd.read_excel(f'data/output/07/02_161544_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a2 = pd.read_excel(f'data/output/07/02_161732_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a3 = pd.read_excel(f'data/output/07/02_162123_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a4 = pd.read_excel(f'data/output/07/02_162305_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a5 = pd.read_excel(f'data/output/07/02_162447_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a6 = pd.read_excel(f'data/output/07/02_162447_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a7 = pd.read_excel(f'data/output/07/02_162636_fl/performance.xlsx').iloc[[-1]]
 
     df = pd.concat([df_llstm, df_clstm, df_flstm_a1, df_flstm_a2, df_flstm_a3, df_flstm_a4, df_flstm_a5,
                     df_flstm_a6, df_flstm_a7], ignore_index=True)
@@ -107,7 +110,7 @@ def draw_performance():
     df = df.groupby('Ahead')
     print(df)
 
-    # 为每个 'Category1' 绘制单独的 bar 图
+    # Draw bar chart for each group
     for key, group in df:
         print(f'key={key}, group={group}')
         group = group.sort_values(by='Model', ascending=False)
@@ -131,25 +134,26 @@ def draw_performance():
 
 def draw_rounds():
     regions = CONFIG['regions']
-    df_flstm_a1 = pd.read_excel(f'data/output/06/11_162802_fl/performance.xlsx')
+    df_flstm_a1 = pd.read_excel(f'data/output/07/02_160338_fl/performance.xlsx')
     df = df_flstm_a1.rename(columns={'RMSE_normalized': 'nRMSE', 'MAE_normalized': 'nMAE'})
 
     for region in regions:
         data = df[df['Region'] == region]
-        plt.figure(num=None, figsize=(6, 6))
-        plt.plot([x for x in range(1, len(data['nMAE']) + 1)], data['nMAE'], label='nMAE')
-        plt.xlabel('Rounds')
-        plt.ylabel('nMAE')
-        plt.legend()
-        plt.tight_layout()
-        plt.gca().spines['right'].set_visible(False)
-        plt.gca().spines['top'].set_visible(False)
-        plt.savefig(f'{output_dir}/figure3_{region}.png')
-        plt.cla()
-        plt.close()
+        for indice in ['nRMSE', 'nMAE', 'nSMAPE']:
+            plt.figure(num=None, figsize=(6, 6))
+            plt.plot([x for x in range(1, len(data[indice]) + 1)], data[indice], label=indice)
+            plt.xlabel('Rounds')
+            plt.ylabel(indice)
+            plt.legend()
+            plt.tight_layout()
+            plt.gca().spines['right'].set_visible(False)
+            plt.gca().spines['top'].set_visible(False)
+            plt.savefig(f'{output_dir}/figure3_{region}.png')
+            plt.cla()
+            plt.close()
 
 
 if __name__ == '__main__':
     # draw_prediction()
-    # draw_performance()
-    draw_rounds()
+    draw_performance()
+    # draw_rounds()

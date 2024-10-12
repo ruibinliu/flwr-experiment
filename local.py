@@ -35,7 +35,7 @@ def lstm(region, dataset, ahead=0):
     # Initialize model, loss function, and optimizer
     model = LSTM(CONFIG['input_len'], CONFIG['hidden_size'], CONFIG['num_layers'], len(CONFIG['output_col']),
                  dropout=CONFIG['dropout'])
-    criterion = nn.MSELoss()
+    criterion = nn.MSELoss()  # Loss function
     optimizer = torch.optim.Adam(model.parameters(), lr=CONFIG['learning_rate'])
 
     model.train()
@@ -89,7 +89,7 @@ def lstm(region, dataset, ahead=0):
     mae_normalized = mae / max(max(y_train), max(y_test))
     s_mape = smape(y_test, y_pred_test)
     r2 = r2_score(y_test, y_pred_test)
-    print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape}:.2f')
+    # print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape}:.2f')
 
     end_time = time.time()
     print(f'{MODEL_NAME} testing time: {round(end_time - start_time, 3)} seconds.')

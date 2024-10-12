@@ -152,7 +152,7 @@ class FlowerClient(fl.client.NumPyClient):
         mae = mean_absolute_error(y_test, y_pred_test).astype(float)
         mae_normalized = mae / max(max(y_train), max(y_test))
         r2 = r2_score(y_test, y_pred_test)
-        print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape:.2f}')
+        # print(f'Test Loss: RMSE={rmse:.2f}, MAE={mae:.2f}, SMAPE={s_mape:.2f}')
 
         # self.performance.append((rmse, mae, s_mape))
         # new_rows = pd.DataFrame({'RMSE': [rmse], 'MAE': [mae], 'SMAPE': [s_mape]})

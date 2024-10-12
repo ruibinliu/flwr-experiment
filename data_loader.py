@@ -32,6 +32,7 @@ def load_datasets(region, use_all=False, ahead=0):
     X_test = []
     y_test = []
     return_scaler = None
+    local_y_train = []
 
     date_index = []
 
@@ -55,8 +56,7 @@ def load_datasets(region, use_all=False, ahead=0):
         target = data_df[output_col].values
 
         # Normalize data
-        # TODO check the min-max scaler, e.g. consider [0, 1000]
-        scaler = MinMaxScaler()  # feature_range=(0, 1000)
+        scaler = MinMaxScaler()
         data = scaler.fit_transform(data)
         target = scaler.fit_transform(target.reshape(-1, 1)).flatten()
 
@@ -79,16 +79,19 @@ def load_datasets(region, use_all=False, ahead=0):
         for i in range(ahead, len(data_df.index.values)):
             date_index.append(data_df.index.values[i])
 
-        print(f'load_datasets: data.shape={X.shape}')
-        print(f'load_datasets: target.shape={y.shape}')
+        # print(f'load_datasets: data.shape={X.shape}')
+        # print(f'load_datasets: target.shape={y.shape}')
 
         # Train-test split
+
         if r == region:
             split_index = int(len(X) * 0.8)
             X_train_temp = X[0:split_index]
             y_train_temp = y[0:split_index]
             X_test_temp = X[split_index:]
             y_test_temp = y[split_index:]
+
+            local_y_train.extend(y_train_temp)
 
             X_train.extend(X_train_temp)
             y_train.extend(y_train_temp)
@@ -110,6 +113,7 @@ def load_datasets(region, use_all=False, ahead=0):
     y_test = torch.tensor(y_test, dtype=torch.float32)
     X_train_origin = torch.tensor(X_train_origin, dtype=torch.float32).unsqueeze(1)
     y_train_origin = torch.tensor(y_train_origin, dtype=torch.float32)
+    local_y_train = torch.tensor(local_y_train, dtype=torch.float32)
 
     if use_all:
         print(f'date_index={date_index}')
@@ -118,4 +122,5 @@ def load_datasets(region, use_all=False, ahead=0):
         index = data_df.index
 
     print(f'Dataset loaded')
-    return Dataset(index, X_train, X_test, y_train, y_test, return_scaler, X_train_origin, y_train_origin, date_index)
+    dataset = Dataset(index, X_train, X_test, y_train, y_test, return_scaler, X_train_origin, y_train_origin, date_index, local_y_train)
+    return dataset

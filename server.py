@@ -34,13 +34,23 @@ def configure_evaluate(server_round: int) -> Dict:
     return {"server_round": server_round, "last_round": (server_round == nrounds), "output_dir": output_dir}
 
 
+def write_to_file(filename, line):
+    with open(filename, 'a') as file:  # 'a' 模式用于追加内容
+        file.write(line + '\n')  # 写入一行并换行
+
+
 def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
     # Multiply accuracy of each client by number of examples used
-    accuracies = [num_examples * m["rmse"] for num_examples, m in metrics]
+    accuracies_rmse = [num_examples * m["rmse"] for num_examples, m in metrics]
     examples = [num_examples for num_examples, _ in metrics]
 
+    accuracy_rmse = sum(accuracies_rmse) / sum(examples)
+
+    print(f'weighted_average: accuracy={accuracy_rmse}')
+    write_to_file(f'{output_dir}/federated_evaluation.txt', f'federated_evaluation: metric=rmse, accuracy={accuracy_rmse}')
+
     # Aggregate and return custom metric (weighted average)
-    return {"accuracy": sum(accuracies) / sum(examples)}
+    return {"accuracy": accuracy_rmse}
 
 
 def start_server(nclients, nrounds):
