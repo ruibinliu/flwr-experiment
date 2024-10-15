@@ -113,7 +113,11 @@ def draw_performance():
     # Draw bar chart for each group
     for key, group in df:
         print(f'key={key}, group={group}')
-        group = group.sort_values(by='Model', ascending=False)
+
+        # Sort the data by custom order
+        custom_order = ['L-LSTM', 'C-LSTM', 'F-LSTM']
+        group['Model'] = pd.Categorical(group['Model'], categories=custom_order, ordered=True)
+        group = group.sort_values('Model')
 
         for i in range(len(colors)):
             plt.figure(num=None, figsize=(8, 8), dpi=DPI)
