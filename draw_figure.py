@@ -15,11 +15,11 @@ if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 colors = [
-    ['#EDF4F5', '#C5E3E2', '#9EC6DB'],
-    ['#DFE1E2', '#B7DBE3', '#F5E09B'],
-    ['#F4DEBB', '#E1B6B5', '#F9F2C1'],
-    ['#9EE092', '#F8D793', '#D2D2D2'],
-    ['#F9F5F6', '#DDDEDE', '#D882AD']
+    ['#EDF4F5', '#C5E3E2', '#9EC6DB']
+    # ['#DFE1E2', '#B7DBE3', '#F5E09B'],
+    # ['#F4DEBB', '#E1B6B5', '#F9F2C1'],
+    # ['#9EE092', '#F8D793', '#D2D2D2'],
+    # ['#F9F5F6', '#DDDEDE', '#D882AD']
 ]
 
 DPI = 150
@@ -83,13 +83,13 @@ def draw_performance():
     df_llstm = pd.read_excel(f'data/output/06/05_225330_local/performance.xlsx')
     df_clstm = pd.read_excel(f'data/output/07/02_165413_centralized/performance.xlsx')
     # Only use the last round performance
-    df_flstm_a1 = pd.read_excel(f'data/output/07/02_161544_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a2 = pd.read_excel(f'data/output/07/02_161732_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a3 = pd.read_excel(f'data/output/07/02_162123_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a4 = pd.read_excel(f'data/output/07/02_162305_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a5 = pd.read_excel(f'data/output/07/02_162447_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a6 = pd.read_excel(f'data/output/07/02_162447_fl/performance.xlsx').iloc[[-1]]
-    df_flstm_a7 = pd.read_excel(f'data/output/07/02_162636_fl/performance.xlsx').iloc[[-1]]
+    df_flstm_a1 = pd.read_excel(f'data/output/07/02_160904_fl_ahead1/performance.xlsx').iloc[[-1]]
+    df_flstm_a2 = pd.read_excel(f'data/output/07/02_161544_fl_ahead2/performance.xlsx').iloc[[-1]]
+    df_flstm_a3 = pd.read_excel(f'data/output/07/02_161732_fl_ahead3/performance.xlsx').iloc[[-1]]
+    df_flstm_a4 = pd.read_excel(f'data/output/07/02_162123_fl_ahead4/performance.xlsx').iloc[[-1]]
+    df_flstm_a5 = pd.read_excel(f'data/output/07/02_162305_fl_ahead5/performance.xlsx').iloc[[-1]]
+    df_flstm_a6 = pd.read_excel(f'data/output/07/02_162447_fl_ahead6/performance.xlsx').iloc[[-1]]
+    df_flstm_a7 = pd.read_excel(f'data/output/07/02_162636_fl_ahead7/performance.xlsx').iloc[[-1]]
 
     df = pd.concat([df_llstm, df_clstm, df_flstm_a1, df_flstm_a2, df_flstm_a3, df_flstm_a4, df_flstm_a5,
                     df_flstm_a6, df_flstm_a7], ignore_index=True)
@@ -117,8 +117,12 @@ def draw_performance():
 
         for i in range(len(colors)):
             plt.figure(num=None, figsize=(8, 8), dpi=DPI)
-            group.plot(kind='bar', x='Model', y=['nRMSE', 'nMAE', 'nSMAPE'], color=colors[i],
+            ax = group.plot(kind='bar', x='Model', y=['nRMSE', 'nMAE', 'nSMAPE'], color=colors[i],
                        edgecolor='white', width=0.9)
+
+            # Draw value above each bar
+            for container in ax.containers:
+                ax.bar_label(container, fmt='%.3f', label_type='edge')
             # plt.xlabel('Model')
             # plt.ylabel('Values')
             # plt.title(f'key = {key}')
